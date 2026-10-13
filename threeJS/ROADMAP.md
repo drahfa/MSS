@@ -91,30 +91,38 @@ Completed in 2.1:
 - [x] Automated test suite expanded to 51/51 passing tests (`test/cable-navigation.test.js`)
 - [x] Integrated `LumpedMassTether` and `NavigationFilter` into physical simulation loop (`src/physics.js`)
 
-## 2.2 — Subsea UVMS Robotic Manipulation (In Progress — Paper 4)
+## 2.2 — Subsea UVMS Robotic Manipulation (Complete — Paper 4)
 
 Goal: formulate and implement Underwater Vehicle-Manipulator System (UVMS) forward/inverse kinematics, hydrodynamic link drag, and floating-base reaction wrench coupling.
 Documented in dedicated IEEE Report: `to-publish/IEEE_UVMS_MANIPULATION_REPORT.md`.
 
-In Progress / Planned:
-- [ ] Establish independent IEEE Technical Report (`to-publish/IEEE_UVMS_MANIPULATION_REPORT.md` and brain artifact)
-- [ ] Forward kinematics and end-effector Jacobian via Denavit-Hartenberg (D-H) formulation for 1-DOF grabber and multi-DOF articulated manipulators (`src/uvmsManipulator.js`)
-- [ ] Newton-Euler recursive inverse dynamics calculating instantaneous reaction wrench $\boldsymbol{\tau}_{\text{react}} = [\mathbf{f}_{\text{react}}, \mathbf{m}_{\text{react}}]^T$ transmitted to floating ROV base
-- [ ] Segmental Morison hydrodynamic cross-flow drag and added mass along articulated arm links
-- [ ] Coupled base-manipulator dynamics integration with vehicle 6-DOF plant in `src/physics.js`
-- [ ] Automated unit test suite verifying D-H kinematics, Jacobian singularities, and reaction wrench conservation (`test/uvms-manipulator.test.js`)
+Completed in 2.2:
+- [x] Establish independent IEEE Technical Report (`to-publish/IEEE_UVMS_MANIPULATION_REPORT.md` and brain artifact)
+- [x] Forward kinematics and end-effector Jacobian via Denavit-Hartenberg (D-H) formulation for articulated manipulators (`src/uvmsManipulator.js`)
+- [x] Newton-Euler recursive inverse dynamics calculating instantaneous reaction wrench $\boldsymbol{\tau}_{\text{react}} = [\mathbf{f}_{\text{react}}, \mathbf{m}_{\text{react}}]^T$ transmitted to floating ROV base
+- [x] Segmental Morison hydrodynamic cross-flow drag and added mass along articulated arm links
+- [x] Coupled base-manipulator dynamics integration with vehicle 6-DOF plant in `src/physics.js`
+- [x] Automated unit test suite verifying D-H kinematics, Jacobian singularities, and reaction wrench conservation (`test/uvms-manipulator.test.js`)
 
-## 2.3 — Multi-ROV Cooperative Operations & Networked Digital Twin (Planned — Paper 5)
+## 2.3 — Multi-ROV Cooperative Operations & Networked Digital Twin (Complete — Paper 5)
 
 Goal: multi-agent subsea robotics coordination, dual-tether anti-entanglement, cooperative payload transport, and real-time hardware-in-the-loop (HIL) telemetry bridge.
 Documented in dedicated IEEE Report: `to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md`.
 
-Planned:
-- [ ] Establish independent IEEE Technical Report (`to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md` and brain artifact)
-- [ ] Tandem dual-ROV tether anti-entanglement spatial distance evaluation between dual 12-node lumped-mass cables (`src/multiRovTetherBridge.js`)
-- [ ] Cooperative dual-arm / dual-vehicle rigid payload transport kinematics
-- [ ] Networked telemetry bridge supporting high-throughput JSON/WebSocket serialization compatible with MAVLink (ArduSub) and ROS 2 (`rosbridge`)
-- [ ] Automated unit test suite for multi-agent clearances, cooperative constraints, and telemetry protocol serialization (`test/multi-rov-bridge.test.js`)
+Completed in 2.3:
+- [x] Establish independent IEEE Technical Report (`to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md` and brain artifact)
+- [x] Tandem dual-ROV tether anti-entanglement spatial distance evaluation between dual 12-node lumped-mass cables (`src/multiRovTetherBridge.js`)
+- [x] Cooperative dual-arm / dual-vehicle rigid payload transport kinematics
+- [x] Networked telemetry bridge supporting high-throughput JSON/WebSocket serialization compatible with MAVLink (ArduSub) and ROS 2 (`rosbridge`)
+- [x] Automated unit test suite for multi-agent clearances, cooperative constraints, and telemetry protocol serialization (`test/multi-rov-bridge.test.js`)
+
+## 3.0 — Synthetic Acoustic Imaging & Neural Benthic Perception (Future Horizon)
+
+Goal: forward imaging sonar (FLS) acoustic ray tracing and photorealistic subsea radiance field synthesis.
+
+- Synthetic 2D Forward-Looking Sonar (FLS) acoustic intensity beamforming and grazing angle backscatter
+- Underwater optical transmission loss and wavelength-dependent spectral attenuation (Jerlov water types I–III)
+- Real-time subsea Neural Radiance Fields (NeRF / 3D Gaussian Splatting) for benthic structure reconstruction
 
 ## Maintenance backlog
 

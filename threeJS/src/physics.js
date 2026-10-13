@@ -6,6 +6,7 @@ import { FailureInjector } from './failureInjection.js';
 import { SensorSuite } from './sensors.js';
 import { LumpedMassTether } from './lumpedMassTether.js';
 import { NavigationFilter } from './navigationFilter.js';
+import { UvmsManipulator } from './uvmsManipulator.js';
 
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 export const wrapPi = angle => ssa(angle);
@@ -242,6 +243,9 @@ export class RovDynamics {
     this.contact = new ContactModel();
     this.sensors = new SensorSuite();
     this.navFilter = new NavigationFilter();
+    this.manipulator = new UvmsManipulator();
+    this.useManipulator = false;
+    this.manipulatorWrench = [0, 0, 0, 0, 0, 0];
     this.tetherState = null;
     this.contactState = null;
     this.sensorReadings = null;
@@ -260,6 +264,8 @@ export class RovDynamics {
     this.time = 0;
     this.lumpedTether.reset([0, 0, 0.5], [this.state[6], this.state[7], this.state[8]]);
     this.navFilter.reset([this.state[6], this.state[7], this.state[8]], 0.35);
+    this.manipulator.setJointAngles([0.0, 0.2, 0.4]);
+    this.manipulatorWrench = [0, 0, 0, 0, 0, 0];
   }
 
   getEuler() {
@@ -343,13 +349,19 @@ export class RovDynamics {
     this.tetherState = tetherData;
     this.contactState = contactData;
 
+    let armWrench = [0, 0, 0, 0, 0, 0];
+    if (this.useManipulator) {
+      armWrench = this.manipulator.computeReactionWrench(this.manipulator.qDot, this.manipulator.qDDot, R, nu1);
+      this.manipulatorWrench = armWrench;
+    }
+
     const tau = [
-      tauThruster[0] + tetherData.totalForceBody[0] + contactData.contactForceBody[0],
-      tauThruster[1] + tetherData.totalForceBody[1] + contactData.contactForceBody[1],
-      tauThruster[2] + tetherData.totalForceBody[2] + contactData.contactForceBody[2],
-      tauThruster[3],
-      tauThruster[4],
-      tauThruster[5],
+      tauThruster[0] + tetherData.totalForceBody[0] + contactData.contactForceBody[0] + armWrench[0],
+      tauThruster[1] + tetherData.totalForceBody[1] + contactData.contactForceBody[1] + armWrench[1],
+      tauThruster[2] + tetherData.totalForceBody[2] + contactData.contactForceBody[2] + armWrench[2],
+      tauThruster[3] + armWrench[3],
+      tauThruster[4] + armWrench[4],
+      tauThruster[5] + armWrench[5],
     ];
 
     // Integrate the pure unconstrained MSS plant via MSS rk4 using depth-sheared current

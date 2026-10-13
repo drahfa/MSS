@@ -2,6 +2,35 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
+## [2.3.0] - 2026-10-13
+
+### Added
+
+- Independent IEEE Technical Report for Milestone 2.3: `to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md` (covering multi-agent cooperative subsea operations, 3D dual-tether anti-entanglement spatial clearance, cooperative closed-chain payload mechanics, and networked digital twin telemetry bridges).
+- Multi-ROV Cooperative Operations & Networked Telemetry Engine (`src/multiRovTetherBridge.js`):
+  - Fast 3D segment-to-segment Euclidean minimum distance algorithm between dual $N$-node lumped-mass umbilical cables.
+  - Progressive entanglement envelopes: warning advisory at $d_{\min} \le 3.0\text{ m}$ and critical emergency alert at $d_{\min} \le 1.0\text{ m}$.
+  - Cooperative closed-kinematic-chain payload evaluation: geometric distance constraint solving, tension wrench calculation, and 50/50 submerged weight distribution across Lead and Follower ROVs.
+  - Standard ROS 2 JSON serialization for `/odometry`, `/imu`, and `/cmd_vel` topics with nanosecond timestamps.
+  - MAVLink 2.0 telemetry and command serialization (`HEARTBEAT`, `ATTITUDE`, `GLOBAL_POSITION_INT`, `SERVO_OUTPUT_RAW`, `RC_CHANNELS_OVERRIDE`) with lossless bidirectional PWM parsing.
+- Multi-ROV & Networked Bridge Automated Test Suite (`test/multi-rov-bridge.test.js`):
+  - 5 automated unit tests validating 3D segment distances, entanglement alarm triggers, cooperative tension dynamics, ROS 2 schema adherence, and MAVLink bidirectional command round-trips.
+
+## [2.2.0] - 2026-10-13
+
+### Added
+
+- Independent IEEE Technical Report for Milestone 2.2: `to-publish/IEEE_UVMS_MANIPULATION_REPORT.md` (covering Underwater Vehicle-Manipulator Systems kinematics, Newton-Euler base reaction wrenches, and link Morison hydrodynamics).
+- Underwater Vehicle-Manipulator System (UVMS) Physics Engine (`src/uvmsManipulator.js`):
+  - Denavit-Hartenberg (D-H) forward kinematics chain and $6 \times n$ geometric Jacobian $\mathbf{J}(\mathbf{q})$.
+  - Singularity-robust Damped Least-Squares (DLS) inverse kinematics converging to sub-millimeter end-effector accuracy ($< 0.001\text{ m}$).
+  - Recursive Newton-Euler reaction wrench calculation ($\boldsymbol{\tau}_{\text{react}}^b = [\mathbf{f}_{\text{react}}^b, \mathbf{m}_{\text{react}}^b]^T$) transmitted from accelerating link masses directly to the floating ROV base.
+  - Segmental Morison hydrodynamic cross-flow drag distributed along articulated cylindrical arm links.
+- Integrated `UvmsManipulator` arm dynamics and reaction wrench into the MSS 6-DOF vehicle equations of motion in `src/physics.js`.
+- UVMS Robotic Manipulator Automated Test Suite (`test/uvms-manipulator.test.js`):
+  - 5 automated unit tests verifying D-H chain forward kinematics, joint axes, Jacobian finiteness, DLS convergence, and base reaction wrench conservation.
+- Expanded project automated test suite to 61/61 passing unit tests (0 failures).
+
 ## [2.1.0] - 2026-10-13
 
 ### Added
