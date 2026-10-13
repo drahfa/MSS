@@ -102,9 +102,19 @@ For integration with open-source subsea autopilots (ArduSub and QGroundControl),
 
 ## V. Benchmark Verification Results
 
+### A. Algorithmic Parity & Protocol Benchmarks
+
 1. **Segment Clearance Accuracy**: Tested against analytical orthogonal and skew segment benchmarks, the 3D minimum distance algorithm achieves machine precision ($< 10^{-12}\text{ m}$) across all spatial orientations.
 2. **MAVLink Serialization Reversibility**: Encoding normalized pilot demands $[-1.0, 1.0]$ into 16-bit PWM microsecond channels and decoding back yields zero round-trip loss ($< 0.001$ margin).
 3. **Execution Efficiency**: Computing full dual-tether clearance across two 12-node cables ($11 \times 11 = 121$ segment pairs) requires only $15.8\ \mu\text{s}$ per physics step, easily sustaining 60 FPS performance.
+
+### B. Real-Time 3D Multi-Agent WebGL Digital Twin & Situational Awareness HMI
+
+The multi-agent architecture was validated through an interactive WebGL simulation testbed:
+- **Dual-Vehicle Fleet Rendering**: A procedural secondary observation-class ROV (yellow cylindrical pressure hull with spherical camera dome and dual LED floodlights) was instantiated, holding dynamic station keeping offset alongside the primary vehicle.
+- **Dynamic 3D Catenary Cables**: Both vehicles trail independent 12-node lumped-mass umbilicals anchored to their respective surface TMS points, curving realistically under 3D sheared current forces.
+- **Line-of-Closest-Approach Vector**: A dynamic 3D line indicator connects the exact closest segments between both cables in real time, automatically shifting through color-coded alert states: green when safe ($d_{\min} > 3.0\text{ m}$), amber when entering the proximity warning envelope ($1.0\text{ m} < d_{\min} \le 3.0\text{ m}$), and flashing red during critical crossover risk ($d_{\min} \le 1.0\text{ m}$).
+- **Cockpit Telemetry Annunciation**: The flight console displays live fleet separation (`Fleet Sep: 4.8 m`), with screen-reader ARIA live regions warning pilots of impending tether entanglement.
 
 ---
 

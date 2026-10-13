@@ -15,6 +15,14 @@ All notable changes to the browser ROV simulator are documented here. The format
   - MAVLink 2.0 telemetry and command serialization (`HEARTBEAT`, `ATTITUDE`, `GLOBAL_POSITION_INT`, `SERVO_OUTPUT_RAW`, `RC_CHANNELS_OVERRIDE`) with lossless bidirectional PWM parsing.
 - Multi-ROV & Networked Bridge Automated Test Suite (`test/multi-rov-bridge.test.js`):
   - 5 automated unit tests validating 3D segment distances, entanglement alarm triggers, cooperative tension dynamics, ROS 2 schema adherence, and MAVLink bidirectional command round-trips.
+- Interactive Procedural 3D Subsea Manipulator Arm View (`src/manipulatorView.js`):
+  - Procedural Three.js mesh hierarchy attached to ROV chin with base azimuth turret, safety-orange upper arm, hydraulic pistons, elbow hub, forearm, and dual gripper jaws animated by forward kinematics.
+- Multi-ROV Fleet & Dynamic Dual-Tether Anti-Entanglement Visualizer (`src/multiRovView.js`):
+  - Procedural yellow Observation Eyeball ROV follower holding station with camera dome and floodlights.
+  - Dual 12-node dynamic 3D catenary umbilical line rendering with surface TMS anchors.
+  - Real-time 3D line-of-closest-approach vector dynamically shifting from green (safe) to amber (warning, $\le 3.0\text{ m}$) and red (critical, $\le 1.0\text{ m}$).
+- Flight Cockpit Console HUD Extensions (`index.html`, `src/main.js`):
+  - Added `Arm EE` and `Fleet Sep` data-grid readouts, interactive `ARM READY` and `FLEET DUAL` annunciator pills, and key mappings (`M`, `T`, `1-3`, `G`).
 
 ## [2.2.0] - 2026-10-13
 

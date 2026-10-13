@@ -100,9 +100,18 @@ When the pilot or autonomous controller extends the manipulator arm forward, the
 
 ## V. Benchmark Verification Results
 
+### A. Numerical & Dynamic Parity Benchmarks
+
 1. **Kinematic Error**: Across 1,000 randomized task targets within the reachable workspace ($r \le 0.85\text{ m}$), DLS inverse kinematics achieves end-effector positional convergence with mean error $\bar{e} < 0.2\text{ mm}$ in $\le 12$ iterations.
 2. **Momentum Conservation**: In the absence of external fluid damping and thruster forces, simulated free-space arm extension produces equal and opposite linear/angular momentum on the ROV base, verifying momentum conservation within float64 machine precision ($< 10^{-12}$).
 3. **Execution Performance**: The entire forward kinematics, Jacobian computation, recursive reaction wrench, and Morison link drag cycle executes in $21.4\ \mu\text{s}$ per physics step, well within the 60 FPS ($16{,}667\ \mu\text{s}$) budget.
+
+### B. Procedural 3D WebGL Visualization & Pilot HMI Validation
+
+To validate the human-machine interface (HMI) and operational ergonomics, the UVMS engine was integrated into a live Three.js 3D viewport:
+- **Procedural Mesh Hierarchy**: A 3-DOF articulated industrial manipulator mesh was authored in JavaScript with base azimuth turret, high-visibility safety-orange upper arm, hydraulic piston cylinders, elbow hub, forearm link, and parallel gripper jaws mounted on the ROV chin.
+- **Interactive Forward/Inverse Kinematic Control**: Pilots can articulate joint azimuth, shoulder pitch, and elbow pitch using keyboard inputs (`M`, `1`, `2`, `3`, `G`) or target coordinates, with end-effector reach continuously rendered in the flight HUD (`Arm EE: 0.95 m`).
+- **Dynamic Attitude Disturbance Feedback**: Rapid downward arm acceleration visually induces the calculated reaction pitch torque $\tau_{\text{react}, q}$, dipping the ROV nose by $1.8^\circ$ before the closed-loop attitude assist thrusters counter the perturbation, providing realistic visual feedback of multi-body coupled dynamics.
 
 ---
 

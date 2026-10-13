@@ -10,6 +10,8 @@ import { TRAINING_SCENARIOS } from './scenarios.js';
 import { ScoringEngine } from './scoringEngine.js';
 import { InstructorStation } from './instructorStation.js';
 import { getLanguage, setLanguage, t } from './i18n.js';
+import { ManipulatorView } from './manipulatorView.js';
+import { MultiRovView } from './multiRovView.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -85,6 +87,13 @@ const rovLights = [];
 });
 scene.add(rov);
 
+const manipulatorView = new ManipulatorView(rov);
+const multiRovView = new MultiRovView(scene);
+let armActive = false;
+let fleetActive = false;
+let armGrip = 0.5;
+manipulatorView.setVisible(false);
+
 async function loadRovClass(key) {
   const profile = ROV_PROFILES[key];
   $('rovClass').disabled = true;
@@ -115,6 +124,7 @@ async function loadRovClass(key) {
       target.position.set(side * .25 * lightScale, -.18 * lightScale, -8 * lightScale);
       spot.distance = Math.max(14, profile.cameraDistance * 2.2);
     });
+    manipulatorView.updateProfile(profile);
     $('vehicleSpec').textContent = `${profile.mass.toLocaleString()} kg · ${profile.role} · ${profile.thrusters.length} thrusters`;
     $('vehicleStateLabel').textContent = `${profile.name} vehicle state`;
     reset();
@@ -296,14 +306,40 @@ function toggleDemo() {
   syncStatus();
 }
 
+function toggleArm() {
+  armActive = !armActive;
+  sim.useManipulator = armActive;
+  manipulatorView.setVisible(armActive);
+  const ind = $('armIndicator');
+  if (ind) {
+    ind.classList.toggle('active', armActive);
+    const span = ind.querySelector('span');
+    if (span) span.textContent = armActive ? 'ARM READY' : 'Arm Stow';
+  }
+}
+
+function toggleFleet() {
+  fleetActive = !fleetActive;
+  multiRovView.setFollowerEnabled(fleetActive);
+  const ind = $('dualRovIndicator');
+  if (ind) {
+    ind.classList.toggle('active', fleetActive);
+    const span = ind.querySelector('span');
+    if (span) span.textContent = fleetActive ? 'FLEET DUAL' : 'Fleet Solo';
+  }
+}
+
 window.addEventListener('keydown', event => {
   if (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'INPUT') return;
-  if (['Space','KeyW','KeyA','KeyS','KeyD','KeyR','KeyF','KeyQ','KeyE'].includes(event.code)) event.preventDefault();
+  if (['Space','KeyW','KeyA','KeyS','KeyD','KeyR','KeyF','KeyQ','KeyE','Digit1','Digit2','Digit3'].includes(event.code)) event.preventDefault();
   if (!event.repeat && event.code === 'Space') togglePause();
   if (!event.repeat && event.code === 'KeyX') reset();
   if (!event.repeat && event.code === 'KeyC') changeCamera();
   if (!event.repeat && event.code === 'KeyH') $('assistButton').click();
   if (!event.repeat && event.code === 'Backquote') toggleDemo();
+  if (!event.repeat && event.code === 'KeyM') toggleArm();
+  if (!event.repeat && event.code === 'KeyT') toggleFleet();
+  if (!event.repeat && event.code === 'KeyG') armGrip = armGrip > 0.5 ? 0.0 : 1.0;
   keys.add(event.code);
 });
 window.addEventListener('keyup', event => {
@@ -319,6 +355,8 @@ $('trailButton').addEventListener('click', () => { showTrail=!showTrail; trail.v
 $('assistButton').addEventListener('click', () => { if (demoMode) return; assist=!assist; $('assistButton').classList.toggle('active',assist); $('assistButton').setAttribute('aria-pressed',assist); targetDepth=sim.state[8]; targetHeading=sim.state[11]; updateModeIndicators(); });
 $('current').addEventListener('input', event => { sim.current.speed=Number(event.target.value); $('currentOutput').textContent=`${sim.current.speed.toFixed(2)} m/s`; });
 $('rovClass').addEventListener('change', event => loadRovClass(event.target.value));
+$('armIndicator')?.addEventListener('click', toggleArm);
+$('dualRovIndicator')?.addEventListener('click', toggleFleet);
 
 $('recordButton')?.addEventListener('click', () => {
   if (!telemetry.isRecording) {
@@ -653,7 +691,20 @@ function updateVisuals(dt) {
   }
   habitat.userData.tick?.(sim.time);
   if (sim.time-lastTrailTime>.12) { lastTrailTime=sim.time; trailPoints.shift(); trailPoints.push(follow.clone()); trailGeo.setFromPoints(trailPoints); }
+
+  // Animate UVMS manipulator arm if active
+  if (armActive) {
+    if (keys.has('Digit1')) sim.manipulator.q[0] = clamp(sim.manipulator.q[0] + (keys.has('ShiftLeft') ? -0.02 : 0.02), -1.5, 1.5);
+    if (keys.has('Digit2')) sim.manipulator.q[1] = clamp(sim.manipulator.q[1] + (keys.has('ShiftLeft') ? -0.02 : 0.02), -0.8, 1.2);
+    if (keys.has('Digit3')) sim.manipulator.q[2] = clamp(sim.manipulator.q[2] + (keys.has('ShiftLeft') ? -0.02 : 0.02), -1.5, 1.5);
+    manipulatorView.updateJoints(sim.manipulator.q, armGrip);
+  }
+
+  // Update dynamic 3D umbilical cables and dual-tether anti-entanglement visualizer
+  lastMultiRes = multiRovView.update(dt, sim.state.slice(6, 9), sim.lumpedTether);
 }
+
+let lastMultiRes = null;
 
 function drawDepthChart() {
   const canvas=$('depthChart'), ctx=canvas.getContext('2d'), w=canvas.width,h=canvas.height;
@@ -688,6 +739,21 @@ function updateUI(dt) {
       const span = tInd.querySelector('span');
       if (span) span.textContent = sim.tetherState.snag ? 'SNAG ALERT' : (sim.tetherState.advisory ? 'TETHER 88%' : 'Tether OK');
     }
+  }
+  if (armActive) {
+    const fk = sim.manipulator.computeForwardKinematics();
+    $('armReach').textContent = `${fk.eePos[0].toFixed(2)} m`;
+  } else {
+    $('armReach').textContent = 'STOW';
+  }
+  if (fleetActive && lastMultiRes?.clearance) {
+    const clr = lastMultiRes.clearance;
+    const clrEl = $('dualTetherClearance');
+    clrEl.textContent = `${clr.minDistance.toFixed(1)} m`;
+    clrEl.style.color = clr.criticalAlert ? 'var(--coral)' : (clr.advisory ? 'var(--amber)' : 'var(--cyan)');
+  } else {
+    $('dualTetherClearance').textContent = 'SOLO';
+    $('dualTetherClearance').style.color = '';
   }
   if (sim.sensorReadings?.dvl) {
     const dvlEl = $('dvlLock');
