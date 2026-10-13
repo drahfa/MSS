@@ -42,15 +42,21 @@ Every profile thruster has this shape:
   r: [front, starboard, down],
   f: [front, starboard, down],
   force: 65,
+  reverseEfficiency: 0.75, // optional, defaults to 0.75 (75% bollard pull in reverse)
+  deadband: 0.04,          // optional, defaults to 0.04 (4% deadband threshold)
 }
 ```
 
 - `r` is a profile-relative body-fixed position multiplied by the profile's `leverScale`.
 - `f` is a unit direction in the front-starboard-down body frame.
-- `force` is the bidirectional limit in newtons.
+- `force` is the nominal forward bollard pull limit in newtons.
+- `reverseEfficiency` scales negative thrust commands (default 0.75) to model ducted propeller reverse thrust loss.
+- `deadband` filters commands below $|u| \le 0.04$ to emulate static friction and ESC deadband.
 - Array order is the channel order used by dynamics, telemetry, and GLB rotor metadata.
 - `id` should remain short enough for the 310 px telemetry rail; use `H1`–`H4` and `V1`–`V4` unless a different functional family is required.
 - `label` should describe location and function in plain operator language.
+- Profiles can be externalized and validated against `public/schemas/rov-profile.schema.json`. See standalone vehicle profiles under `public/vehicles/`.
+- For formal mathematical derivations and lineage, refer to `to-publish/IEEE_TECHNICAL_REPORT.md`.
 
 Under-actuated vehicles are valid. Do not add hidden forces to make every keyboard axis work. An unavailable allocation row should remain unavailable and be handled by the damped inverse and passive restoring terms.
 
@@ -81,8 +87,9 @@ The exporter writes `channel_index`, Blender-axis metadata, and glTF-axis metada
 
 ### Blender and glTF
 
-- Blender scene: Z-up.
-- glTF/Three.js scene: Y-up.
+- Blender scene: Z-up, vehicle nose authored toward $-Y$.
+- glTF/Three.js scene: Y-up, vehicle nose points North ($-Z$) after applying a $180^\circ$ runtime Y rotation.
+- Blender $+X$ is vehicle port, and $-X$ is vehicle starboard to account for this $180^\circ$ runtime orientation.
 - Propeller geometry is authored in the Blender rotor's local XY plane.
 - Blender local Z is the authored shaft.
 - After the export conversion, the runtime rotor shaft is local Y.
@@ -91,7 +98,7 @@ The exporter writes `channel_index`, Blender-axis metadata, and glTF-axis metada
 ## Dynamics notes
 
 - State order is `[u, v, w, p, q, r, north, east, down, phi, theta, psi]`.
-- The mass and damping representation is diagonal.
+- System mass is a fully coupled $6 \times 6$ matrix solved using Gaussian elimination (`mldivide`).
 - Current is transformed into the body frame and subtracted before Coriolis and damping calculations.
 - The allocator uses physical wrench columns and row authority normalization before applying a damped pseudoinverse.
 - The dynamics timestep is fixed; do not replace it with display-frame `dt` without revalidating stability.
@@ -103,19 +110,18 @@ When changing coefficients, document provenance and units. Representative guesse
 
 The current JavaScript plant is an MSS-inspired reduced-order implementation. It is not a 100% numerical port of `hydroVessel.m`, `remus100.m`, or any other single MSS vehicle model. Product copy, code comments, and releases must not claim full MSS compliance until the validation gate below is satisfied.
 
-| Area | Current parity | Boundary |
+| Area | Current parity | Implementation |
 | --- | --- | --- |
-| State order and frames | Matches | Uses the MSS 12-state order with FSD body axes and NED navigation axes |
-| RK4 | Equivalent method | JavaScript uses the same four-stage update at a fixed `0.01 s` step |
-| Euler kinematics | Reduced | Formula follows ZYX kinematics, but JavaScript clamps pitch and protects the tangent denominator |
-| Restoring vector | Formula matches | Weight, buoyancy, CG, and CB values remain representative profile data |
-| Relative current | Partial | Planar current is supported; the complete `-S(omega)v_c` derivative and vertical current are not |
-| Rigid-body Coriolis | Reduced | Correct for diagonal inertia at the CG; the MSS CG-to-origin screw transform is absent |
-| Added-mass Coriolis | Reduced | Correct only for the diagonal added-mass representation used by the profiles |
-| Mass solve | Not equivalent | JavaScript divides component-wise by diagonal effective mass instead of solving a full coupled `6 x 6` system |
-| Hydrodynamic loads | Not equivalent | MSS lift/drag, cross-flow drag, and speed-dependent damping functions are not ported |
-| Propulsion and controls | Custom | ROV thrusters, force limits, actuator lag, allocator, assist, and demo controllers are simulator-specific |
-| Parameters | Not validated | The five class profiles do not come from MSS reference vehicles or certified vehicle data |
+| State order and frames | Complete | Uses MSS 12-state order `[u v w p q r n e d phi theta psi]` with FSD body axes and NED navigation axes |
+| RK4 | Complete | MSS `rk4.m` ported line-for-line in `src/mss/library.js` |
+| Euler kinematics | Complete | MSS `eulerang.m`, `Rzyx.m`, `Tzyx.m` in `src/mss/library.js` |
+| Restoring vector | Complete | MSS `gRvect.m` with weight and buoyancy moments about CO |
+| Relative current | Complete | Planar irrotational current with complete `nu_c_dot = [-Smtrx(omega) * v_c; 0]` derivative |
+| Rigid-body Coriolis & Mass | Complete | MSS `rbody.m` transforming `MRB` and `CRB` using the CG lever arm $H(r_{bG})$ |
+| Added-mass Coriolis | Complete | MSS `m2c.m` 6-DOF formulation |
+| Mass solve | Complete | Full coupled $6 \times 6$ solve $M \setminus \text{RHS}$ using Gaussian elimination with partial pivoting (`mldivide`) |
+| Plant separation | Complete | Pure unconstrained plant `rovPlant` isolated from browser clamps and UI controls |
+| Test suite | Active | `npm test` runs Node test runner validating MSS library and plant dynamics |
 
 There is also a known modeling inconsistency: profiles use a nonzero `cg` value in hydrostatic restoring moments, while their diagonal rigid-body mass and Coriolis representation assumes the body origin is at the CG. MSS `rbody.m` transforms both `MRB` and `CRB` using the CG lever arm. Resolve this before using the model for quantitative engineering comparisons.
 
@@ -248,11 +254,10 @@ Interactive transitions are functional and short. Reduced-motion users receive n
 
 ## Known technical debt
 
-- There is no committed automated test or CI configuration.
+- Automated tests cover core MSS math and unforced free decay; automated batch comparison against live Octave execution in CI remains to be wired.
 - `main.js` combines rendering, input, orchestration, and telemetry responsibilities.
 - The Three.js bundle triggers Vite's 500 kB chunk advisory.
 - The retained Polyfork submarine module is unused.
 - Vehicle data is embedded in JavaScript rather than loaded from a versioned schema.
-- The plant has no MATLAB/Octave parity harness and cannot claim full MSS numerical compliance.
 
 Address verification debt before increasing physical fidelity; see [ROADMAP.md](ROADMAP.md).

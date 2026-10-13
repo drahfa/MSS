@@ -207,7 +207,7 @@ def hobbyist():
         sphere(f"streamlined_hull_{x}", (x, 0, 0), (.16, .78, .17), r, YELLOW, 24, 12)
         cube(f"keel_{x}", (x, .08, -.16), (.18, .74, .10), r, GRAPHITE, .035)
     for x in (-.27, .27): camera_eye(f"camera_{x}", (x, -.69, -.02), .075, r)
-    for channel, x in enumerate((-.43, .43)): thruster(f"drive_{x}", (x, .15, -.02), .72, r, "Y", channel)
+    for channel, x in enumerate((.43, -.43)): thruster(f"drive_{x}", (x, .15, -.02), .72, r, "Y", channel)
     thruster("depth", (0, .12, .05), .54, r, "Z", 2)
     cube("tail_fin", (0, .55, .15), (.06, .32, .22), r, YELLOW_DARK, .02)
     lamp("nose_light", (0, -.72, .1), r, .06)
@@ -219,7 +219,7 @@ def observation():
     cube("pressure_body", (0, 0, .05), (1.05, 1.20, .56), r, YELLOW, .16)
     cylinder("front_port", (0, -.62, .06), .30, .14, r, GLASS, (math.pi/2,0,0), 20, .035)
     camera_eye("observation_camera", (0, -.71, .04), .11, r)
-    for channel, x in enumerate((-.56, .56)):
+    for channel, x in enumerate((.56, -.56)):
         cylinder(f"float_{x}", (x, .04, .22), .16, .98, r, YELLOW_DARK, (math.pi/2,0,0), 14, .04)
         thruster(f"horizontal_{x}", (x, .24, -.16), .76, r, "Y", channel)
         # Lift ducts are outboard of both the pressure body and yellow floats.
@@ -237,15 +237,16 @@ def inspection():
     camera_eye("inspection_camera", (0, -.73, .02), .16, r)
     for x in (-.48,.48):
         lamp(f"inspection_lamp_{x}",(x,-.72,.24),r,.09)
+    # Blender +X is vehicle port when vehicle faces -Y (180 deg Y rotation at runtime).
     horizontal = [
-        (-.48, -.34, (1, -1, 0)), (.48, -.34, (-1, -1, 0)),
-        (-.48, .34, (-1, -1, 0)), (.48, .34, (1, -1, 0)),
+        (.48, -.34, (-1, -1, 0)), (-.48, -.34, (1, -1, 0)),
+        (.48, .34, (1, -1, 0)), (-.48, .34, (-1, -1, 0)),
     ]
     for channel, (x, y, direction) in enumerate(horizontal):
         thruster(f"inspection_h{channel + 1}", (x, y, .02), .66, r, direction, channel)
     channel = 4
     for y in (-.43, .43):
-        for x in (-.86, .86):
+        for x in (.86, -.86):
             thruster(f"inspection_v{channel - 3}", (x, y, .43), .52, r, "Z", channel)
             channel += 1
     sphere("sonar", (0,-.60,-.37),(.13,.13,.13),r,YELLOW_DARK,12,8)
@@ -259,12 +260,12 @@ def light_work():
     for x in (-.72,0,.72): cube(f"vent_{x}",(x,-.66,.69),(.42,.05,.18),r,BLACK,.015)
     cube("control_bay", (0,.20,.05),(1.25,.82,.68),r,YELLOW_DARK,.08)
     horizontal = [
-        (-.86, -.46, (1, -1, 0)), (.86, -.46, (-1, -1, 0)),
-        (-.86, .46, (-1, -1, 0)), (.86, .46, (1, -1, 0)),
+        (.86, -.46, (-1, -1, 0)), (-.86, -.46, (1, -1, 0)),
+        (.86, .46, (1, -1, 0)), (-.86, .46, (-1, -1, 0)),
     ]
     for channel, (x, y, direction) in enumerate(horizontal):
         thruster(f"light_h{channel + 1}", (x, y, .10), .95, r, direction, channel)
-    for channel, x in enumerate((-1.30, 1.30), start=4):
+    for channel, x in enumerate((1.30, -1.30), start=4):
         thruster(f"light_v{channel - 3}", (x, -.08, .42), .82, r, "Z", channel)
         lamp(f"light_lamp_{x}",(x*.72,-.88,.28),r,.11)
     claw("arm_left",(-.58,-.67,-.35),-1,r,.85)
@@ -281,14 +282,14 @@ def heavy_work():
     cube("power_module",(0,.44,.22),(2.5,1.15,.92),r,GRAPHITE,.10)
     cube("tooling_skid",(0,-.02,-1.38),(3.85,2.55,.24),r,STEEL,.04)
     horizontal = [
-        (-1.72, -.58, (1, -1, 0)), (1.72, -.58, (-1, -1, 0)),
-        (-1.72, .58, (-1, -1, 0)), (1.72, .58, (1, -1, 0)),
+        (1.72, -.58, (-1, -1, 0)), (-1.72, -.58, (1, -1, 0)),
+        (1.72, .58, (1, -1, 0)), (-1.72, .58, (-1, -1, 0)),
     ]
     for channel, (x, y, direction) in enumerate(horizontal):
         thruster(f"heavy_h{channel + 1}", (x, y, .04), 1.28, r, direction, channel)
     channel = 4
     for y in (-.72, .72):
-        for x in (-2.12, 2.12):
+        for x in (2.12, -2.12):
             # Outboard mount keeps the entire vertical flow column clear.
             thruster(f"heavy_v{channel - 3}", (x, y, .62), 1.12, r, "Z", channel)
             beam(f"heavy_v_mount_{channel - 3}", (math.copysign(1.72, x), y, .62), (x, y, .62), .06, r, STEEL)

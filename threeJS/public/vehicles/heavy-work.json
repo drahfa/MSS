@@ -1,0 +1,177 @@
+{
+  "name": "Heavy work",
+  "role": "Construction + recovery · 6,000 m",
+  "mass": 4200,
+  "inertia": [
+    3100,
+    5450,
+    5900
+  ],
+  "addedMass": [
+    1900,
+    2800,
+    3300,
+    860,
+    2100,
+    2300
+  ],
+  "linearDamping": [
+    1500,
+    2300,
+    2800,
+    690,
+    1150,
+    1260
+  ],
+  "quadraticDamping": [
+    2400,
+    3400,
+    4200,
+    520,
+    880,
+    980
+  ],
+  "leverScale": 3.4,
+  "cg": 0.18,
+  "cameraDistance": 13.2,
+  "actuatorTau": 0.42,
+  "buoyancyRatio": 1.006,
+  "thrusters": [
+    {
+      "id": "H1",
+      "label": "Front port vector",
+      "r": [
+        0.58,
+        -1.72,
+        0
+      ],
+      "f": [
+        0.7071067811865476,
+        0.7071067811865476,
+        0
+      ],
+      "force": 2100,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "H2",
+      "label": "Front starboard vector",
+      "r": [
+        0.58,
+        1.72,
+        0
+      ],
+      "f": [
+        0.7071067811865476,
+        -0.7071067811865476,
+        0
+      ],
+      "force": 2100,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "H3",
+      "label": "Aft port vector",
+      "r": [
+        -0.58,
+        -1.72,
+        0
+      ],
+      "f": [
+        0.7071067811865476,
+        -0.7071067811865476,
+        0
+      ],
+      "force": 2100,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "H4",
+      "label": "Aft starboard vector",
+      "r": [
+        -0.58,
+        1.72,
+        0
+      ],
+      "f": [
+        0.7071067811865476,
+        0.7071067811865476,
+        0
+      ],
+      "force": 2100,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V1",
+      "label": "Front port lift",
+      "r": [
+        0.72,
+        -2.12,
+        -0.62
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 2350,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V2",
+      "label": "Front starboard lift",
+      "r": [
+        0.72,
+        2.12,
+        -0.62
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 2350,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V3",
+      "label": "Aft port lift",
+      "r": [
+        -0.72,
+        -2.12,
+        -0.62
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 2350,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V4",
+      "label": "Aft starboard lift",
+      "r": [
+        -0.72,
+        2.12,
+        -0.62
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 2350,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    }
+  ]
+}

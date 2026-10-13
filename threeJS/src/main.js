@@ -85,7 +85,8 @@ async function loadRovClass(key) {
   try {
     let source = modelCache.get(key);
     if (!source) {
-      source = (await modelLoader.loadAsync(`/models/rov-${key}.glb`)).scene;
+      const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+      source = (await modelLoader.loadAsync(`${base}/models/rov-${key}.glb`)).scene;
       modelCache.set(key, source);
     }
     const nextModel = enableShadows(source.clone(true));
@@ -176,7 +177,7 @@ function updateModeIndicators() {
   $('demoIndicator').classList.toggle('active', demoMode);
 }
 function togglePause() { running = !running; syncStatus(); }
-function reset() { sim.reset(); targetDepth=2; targetHeading=sim.state[11]; demoLeg=0; demoLegStarted=sim.time; depthHistory.length=0; trailPoints.forEach(p=>p.set(0,0,0)); trailGeo.setFromPoints(trailPoints); syncStatus(); }
+function reset() { sim.reset(); targetDepth=2; targetHeading=sim.state[11]; demoLeg=0; demoLegStarted=sim.time; depthHistory.length=0; lastTrailTime=0; trailPoints.forEach(p=>p.set(0,0,0)); trailGeo.setFromPoints(trailPoints); syncStatus(); }
 function syncCameraButton() {
   $('cameraButton').textContent = `${cameraNames[cameraMode]} `;
   const shortcut = document.createElement('kbd');
@@ -304,19 +305,25 @@ function updateVisuals(dt) {
     camera.up.set(0, 1, 0);
     const fpvScale = sim.profile.leverScale;
     const offset = new THREE.Vector3(.15*fpvScale,.18*fpvScale,-.48*fpvScale).applyAxisAngle(new THREE.Vector3(0,1,0),-psi); camera.position.copy(follow.clone().add(offset));
-    camera.lookAt(follow.clone().add(new THREE.Vector3(Math.sin(psi)*8,-theta*5,-Math.cos(psi)*8))); controls.enabled=false;
+    camera.lookAt(follow.clone().add(new THREE.Vector3(Math.sin(psi)*8,theta*5,-Math.cos(psi)*8))); controls.enabled=false;
   }
   if (controls.enabled) controls.update();
   rovModel?.userData.tick?.(sim.time);
   // Compose the spin on the exported node's local shaft axis so horizontal
   // and vertical thrusters retain their independently authored orientation.
-  rovModel?.userData.rotors?.forEach((rotor, index) => {
-    const channel = Number.isInteger(rotor.userData.channel_index) ? rotor.userData.channel_index : index;
-    const command = sim.thrusters[channel] ?? 0;
-    rotor.rotateOnAxis(rotorShaftAxis, dt * 28 * command);
-  });
+  if (running) {
+    rovModel?.userData.rotors?.forEach((rotor, index) => {
+      const channel = Number.isInteger(rotor.userData.channel_index) ? rotor.userData.channel_index : index;
+      const command = sim.thrusters[channel] ?? 0;
+      rotor.rotateOnAxis(rotorShaftAxis, dt * 28 * command);
+    });
+    // In Three.js: East=+X, North=-Z. Direction betaVc is clockwise from North.
+    const currentEast = Math.sin(sim.current.direction) * sim.current.speed;
+    const currentNorth = Math.cos(sim.current.direction) * sim.current.speed;
+    motes.position.x += currentEast * dt * .08;
+    motes.position.z -= currentNorth * dt * .08;
+  }
   habitat.userData.tick?.(sim.time);
-  motes.position.x += sim.current.speed * dt * .08;
   if (sim.time-lastTrailTime>.12) { lastTrailTime=sim.time; trailPoints.shift(); trailPoints.push(follow.clone()); trailGeo.setFromPoints(trailPoints); }
 }
 

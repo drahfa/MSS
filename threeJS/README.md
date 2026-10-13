@@ -45,8 +45,10 @@ The Assist control holds depth, heading, and attitude within the authority avail
 
 ## What is included
 
-- Nonlinear 6-DOF rigid-body and added-mass dynamics
-- Current-relative velocity, Coriolis, damping, buoyancy, and restoring forces
+- Pure MSS 6-DOF plant formulation (`src/mss/rovPlant.js`) and core mathematics library (`src/mss/library.js`)
+- Nonlinear propulsion dynamics with thruster deadband thresholding and asymmetric forward/reverse bollard pull curves
+- External JSON parameter schema (`public/schemas/rov-profile.schema.json`) and modular vehicle definitions (`public/vehicles/*.json`)
+- Current-relative velocity, irrotational current acceleration corrections, Coriolis, damping, buoyancy, and restoring forces
 - Fixed-step fourth-order Runge-Kutta integration
 - Per-class damped least-squares thruster allocation and actuator lag
 - Hobbyist, Observation, Inspection, Light work, and Heavy work ROVs
@@ -55,6 +57,7 @@ The Assist control holds depth, heading, and attitude within the authority avail
 - Autonomous six-leg inspection demo, enabled with `~`
 - Depth history, attitude, heading, velocity, current, and dynamic thruster telemetry
 - Responsive operator-console layout based on a subsea flight-screen visual language
+- IEEE Transactions-style technical paper and architecture specification in [`to-publish/IEEE_TECHNICAL_REPORT.md`](../to-publish/IEEE_TECHNICAL_REPORT.md)
 
 ## System overview
 
@@ -161,7 +164,13 @@ threeJS/
 
 ## Verification
 
-Before handing off a change:
+Run the automated test suite:
+
+```powershell
+npm test
+```
+
+Create and verify a production build:
 
 ```powershell
 npm run build
@@ -179,10 +188,8 @@ Also exercise the following in a browser:
 
 - Mass, inertia, hydrodynamic coefficients, and force limits are representative rather than vehicle-certified data.
 - Ambient-current flow is implemented through relative velocity and hydrodynamic damping. Propeller wake, advance ratio, cavitation, and thruster-thruster interaction are not modeled.
-- The model uses diagonal mass, added-mass, and damping coefficients rather than full coupled matrices.
 - Euler angles are retained for readability; this is not a high-attitude maneuvering model.
 - Tether forces, seabed contact, collision response, manipulator physics, and sensor noise are not simulated.
-- Automated unit, scenario, and visual-regression tests are not yet checked into the project.
 - Vite reports a bundle-size advisory because Three.js and the scene ship in one JavaScript chunk.
 
 See [ROADMAP.md](ROADMAP.md) for planned verification and fidelity work.

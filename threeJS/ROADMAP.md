@@ -10,35 +10,34 @@ This roadmap prioritizes trust in the simulation before adding more visual or mi
 - Three cameras, operator assist, adaptive telemetry, and autonomous demo
 - Reproducible Blender-to-GLB fleet build
 
-## 1.1 — Verification and repeatability
+## 1.1 — Verification and repeatability (Complete)
 
-Goal: make physics and asset regressions detectable without manual inspection.
+Completed items & acceptance criteria:
+- Line-for-line port of core MSS functions (`rbody`, `m2c`, `gRvect`, `eulerang`, `Smtrx`, `Hmtrx`, `rk4`, `ssa`)
+- Coupled 6x6 mass and Coriolis solving in `src/mss/`
+- Node unit test suite covering kinematics, matrix operations, and numerical solvers (`test/mss-library.test.js`)
+- Pure-axis allocation tests for all supported and unsupported degrees of freedom across all 5 profiles (`test/allocation.test.js`)
+- Model metadata automated verification ensuring rotor count and channel indices match `ROV_PROFILES` (`test/glb-metadata.test.js`)
+- Deterministic 60-second scenario tests across all 5 vehicle profiles with finite state and decaying velocities (`test/rov-plant.test.js`)
+- Fixed FPV camera look-at pitch direction, base URL path resolution, trail resets, paused rotor freeze, and 2D planar current drift
 
-- Add unit tests for rotations, Coriolis terms, restoring forces, RK4, and matrix allocation
-- Add pure-axis allocation tests for every supported and unsupported degree of freedom
-- Add deterministic scenario tests with stored tolerances for state histories
-- Validate every GLB's rotor count and `channel_index` metadata against `ROV_PROFILES`
-- Add browser smoke tests for class switching, cameras, demo mode, and keyboard controls
-- Add visual regression views for propeller clearance and responsive layouts
-- Run build and tests in continuous integration
-
-Acceptance criteria:
-
-- All five profiles complete deterministic 60-second scenarios with finite state
-- Model/channel mismatches fail the build
-- UI smoke tests pass at desktop, tablet, and mobile breakpoints
-
-## 1.2 — Hydrodynamic and propulsion fidelity
+## 1.2 — Hydrodynamic and propulsion fidelity (In Progress)
 
 Goal: move from representative motion toward calibratable vehicle behavior.
 
-- Support full coupled rigid-body, added-mass, and damping matrices
-- Add configurable thrust curves, deadband, asymmetric forward/reverse output, and voltage effects
-- Model advance ratio, local inflow, wake interaction, and optional cavitation limits
-- Add vertical and horizontal current shear rather than a single planar current vector
-- Introduce quaternion attitude propagation while retaining Euler telemetry
-- Add parameter import/export with units and schema validation
-- Document a calibration workflow against sea-trial or tank-test data
+Completed in 1.2:
+- [x] External Vehicle Parameter Schema (`public/schemas/rov-profile.schema.json`) and standalone JSON profiles (`public/vehicles/*.json`)
+- [x] Nonlinear thruster mechanics: deadband cutoff and asymmetric forward/reverse bollard thrust curves (`effectiveThrustRatio`)
+- [x] Propulsion and JSON schema unit test suite (`test/propulsion-and-schema.test.js`)
+- [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`)
+
+Remaining in 1.2:
+- Propeller advance ratio $J_a$, local inflow, wake interaction, and cavitation limits
+- Free-decay and step-response verification tests against reference measurements
+- Parameter import/export UI with real-time JSON validation
+- Vertical and horizontal current shear rather than a single planar current vector
+- Quaternion attitude propagation while retaining Euler telemetry
+- Documented calibration workflow against sea-trial or tank-test data
 
 Acceptance criteria:
 

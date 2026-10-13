@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RovProfile",
+  "description": "Standardized definition schema for 6-DOF ROV hydrodynamic profiles and propulsion models.",
+  "type": "object",
+  "required": [
+    "name",
+    "role",
+    "mass",
+    "inertia",
+    "addedMass",
+    "linearDamping",
+    "quadraticDamping",
+    "leverScale",
+    "cg",
+    "thrusters"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name of the ROV class."
+    },
+    "role": {
+      "type": "string",
+      "description": "Operational designation and depth rating."
+    },
+    "mass": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Total dry vehicle mass in kilograms."
+    },
+    "inertia": {
+      "type": "array",
+      "items": { "type": "number", "exclusiveMinimum": 0 },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Principal moments of inertia [Ix, Iy, Iz] in kg*m^2."
+    },
+    "addedMass": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Diagonal hydrodynamic added mass [X_udot, Y_vdot, Z_wdot, K_pdot, M_qdot, N_rdot]."
+    },
+    "addedMassMatrix": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 6,
+        "maxItems": 6
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Optional full 6x6 coupled added-mass matrix. Supersedes addedMass if present."
+    },
+    "linearDamping": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Diagonal linear damping coefficients [Xu, Yv, Zw, Kp, Mq, Nr]."
+    },
+    "linearDampingMatrix": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 6,
+        "maxItems": 6
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Optional full 6x6 coupled linear damping matrix. Supersedes linearDamping if present."
+    },
+    "quadraticDamping": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 6,
+      "maxItems": 6,
+      "description": "Diagonal quadratic damping coefficients [Xuu, Yvv, Zww, Kpp, Mqq, Nrr]."
+    },
+    "leverScale": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Geometric scale factor mapping profile lever arms to vehicle body dimensions."
+    },
+    "cg": {
+      "type": "number",
+      "description": "Center of gravity offset along body Z axis (downward from body origin in meters)."
+    },
+    "cb": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3,
+      "default": [0, 0, 0],
+      "description": "Center of buoyancy position [xb, yb, zb] relative to body origin."
+    },
+    "buoyancyRatio": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1.006,
+      "description": "Ratio of total buoyant force to vehicle weight (B / W). Default is 1.006 (slightly positive)."
+    },
+    "cameraDistance": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Optimal chase camera offset distance in meters."
+    },
+    "actuatorTau": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "First-order thruster electrical/mechanical time constant in seconds."
+    },
+    "thrusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "r", "f", "force"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "r": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Normalized body position [x_front, y_starboard, z_down]."
+          },
+          "f": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Unit thrust direction [fx, fy, fz] in body frame."
+          },
+          "force": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Maximum forward bollard thrust limit in Newtons."
+          },
+          "reverseEfficiency": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "default": 0.75,
+            "description": "Ratio of reverse bollard thrust to forward thrust (T_rev / T_fwd). Typically 0.65 - 0.85."
+          },
+          "deadband": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.3,
+            "default": 0.04,
+            "description": "Normalized command deadband threshold [-deadband, deadband] within which output thrust is zero."
+          }
+        }
+      }
+    }
+  }
+}

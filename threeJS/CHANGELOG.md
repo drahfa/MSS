@@ -2,13 +2,49 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
-## Unreleased
+## [1.2.0] - In Progress
 
-### Planned
+### Added
 
-- Automated dynamics, model-metadata, and browser regression tests
+- External Vehicle Parameter Schema (`public/schemas/rov-profile.schema.json`) defining standard specifications for mass, inertia, 6x6 added mass and damping matrices, thruster geometry, force limits, deadbands, and reverse efficiencies.
+- Standalone JSON vehicle profiles exported for all 5 ROV classes in `public/vehicles/{hobbyist,observation,inspection,light-work,heavy-work}.json`.
+- Non-linear thruster mechanics in `src/physics.js`:
+  - Deadband cutoff (`effectiveThrustRatio`) modeling static friction and ESC deadbands ($u \le 0.04 \implies 0$).
+  - Asymmetric bollard pull efficiency ($75\%$ reverse efficiency) modeling ducted propeller reverse thrust loss.
+- Unit test suite `test/propulsion-and-schema.test.js` validating deadband thresholds, linear slope scaling, reverse penalties, and JSON vehicle profile compilation via `buildVehicle`.
+- Comprehensive IEEE Transactions-style technical paper and architectural specification published to `to-publish/IEEE_TECHNICAL_REPORT.md`.
 
-## 1.0.0 - 2026-10-13
+## [1.1.0] - 2026-10-13
+
+### Added
+
+- Exact line-for-line ports of MSS MATLAB `LIBRARY` routines into `src/mss/library.js`:
+  - Kinematics: `Smtrx`, `Hmtrx`, `Rzyx`, `Tzyx`, `eulerang`, `ssa`.
+  - Kinetics & Restoring: `rbody` (with $H(r_{bG})$ rigid-body lever arm transformation), `m2c`, `gRvect`, `mssConstants`, `sat`.
+  - Solvers: Full $6 \times 6$ `mldivide` solver (Gaussian elimination with partial pivoting), `inv`, and `rk4`.
+- Pure unconstrained MSS 6-DOF plant implementation in `src/mss/rovPlant.js` mirroring `hydroVessel.m` and `remus100.m`.
+- Automated test suite using Node's native test runner (`npm test`):
+  - `test/mss-library.test.js`: Validates skew-symmetry, $SO(3)$ orthogonality, matrix inversions, and harmonic oscillator RK4 integration.
+  - `test/allocation.test.js`: Validates $[-1, 1]$ command saturation and physical directional authority for pure-axis demand across all 5 ROV profiles.
+  - `test/glb-metadata.test.js`: Validates that all 5 GLB model files have rotor node counts and `channel_index` extras strictly matching `ROV_PROFILES`.
+  - `test/rov-plant.test.js`: Validates symmetric positive definite system matrices across all 5 ROV profiles and verifies 60-second 6-DOF dynamic stability and damping.
+
+### Changed
+
+- Refactored `src/physics.js` to run the coupled unconstrained MSS plant via `rk4`, separating environmental boundary clamps and control logic from vehicle dynamics.
+- Switched angle wrapping to MSS `ssa` (smallest signed angle) semantics.
+
+### Fixed
+
+- Corrected Blender model port and starboard thruster channel indexing across all 5 ROV classes in `build_rov_fleet.py` to match `ROV_PROFILES` with the runtime $180^\circ$ yaw orientation.
+- Regenerated all browser GLBs (`public/models/rov-*.glb`) and updated the canonical `rov-fleet.blend`.
+- Stopped propeller rotor animation while simulation is paused.
+- Adjusted water mote drift in `src/main.js` to travel along the ambient current vector $(\sin\beta_{Vc}, -\cos\beta_{Vc})$ instead of fixed $+X$.
+- Corrected inverted FPV camera look-at pitch direction in `src/main.js`.
+- Reset trail path history properly on vehicle reset by resetting `lastTrailTime`.
+- Replaced hard-coded `/models/` URLs with Vite's `import.meta.env.BASE_URL` to support arbitrary deployment base paths.
+
+## [1.0.0] - 2026-10-13
 
 ### Added
 

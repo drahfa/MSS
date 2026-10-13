@@ -1,0 +1,109 @@
+{
+  "name": "Observation",
+  "role": "Visual survey · 300 m",
+  "mass": 22,
+  "inertia": [
+    0.72,
+    1.05,
+    1.2
+  ],
+  "addedMass": [
+    8.5,
+    13.5,
+    16,
+    0.14,
+    0.42,
+    0.48
+  ],
+  "linearDamping": [
+    11,
+    16,
+    20,
+    1.6,
+    2.5,
+    2.8
+  ],
+  "quadraticDamping": [
+    18,
+    25,
+    30,
+    1.1,
+    1.8,
+    2
+  ],
+  "leverScale": 0.9,
+  "cg": 0.028,
+  "cameraDistance": 5.1,
+  "actuatorTau": 0.14,
+  "buoyancyRatio": 1.006,
+  "thrusters": [
+    {
+      "id": "H1",
+      "label": "Port drive",
+      "r": [
+        0,
+        -0.56,
+        0.16
+      ],
+      "f": [
+        1,
+        0,
+        0
+      ],
+      "force": 18,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "H2",
+      "label": "Starboard drive",
+      "r": [
+        0,
+        0.56,
+        0.16
+      ],
+      "f": [
+        1,
+        0,
+        0
+      ],
+      "force": 18,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V1",
+      "label": "Port lift",
+      "r": [
+        0.12,
+        -0.88,
+        -0.18
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 21,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    },
+    {
+      "id": "V2",
+      "label": "Starboard lift",
+      "r": [
+        0.12,
+        0.88,
+        -0.18
+      ],
+      "f": [
+        0,
+        0,
+        1
+      ],
+      "force": 21,
+      "reverseEfficiency": 0.75,
+      "deadband": 0.04
+    }
+  ]
+}
