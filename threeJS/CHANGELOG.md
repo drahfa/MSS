@@ -2,6 +2,27 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
+## [2.1.0] - 2026-10-13
+
+### Added
+
+- Independent IEEE Technical Report for Milestone 2.1: `to-publish/IEEE_CABLE_NAVIGATION_REPORT.md` (covering multi-node viscoelastic lumped-mass umbilical dynamics and 15-state Error-State Extended Kalman Filter acoustic-inertial navigation fusion).
+- $N$-Node Viscoelastic Lumped-Mass Umbilical Cable Dynamics Engine (`src/lumpedMassTether.js`):
+  - 12-node spatial discretization with flat typed `Float64Array` memory layout achieving $16.5\ \mu\text{s}$ execution per physics step.
+  - Non-linear unilateral axial tension (zero under compression, Hookean under stretch) with internal viscoelastic damping.
+  - Morison hydrodynamic cross-flow ($C_{d,n} = 1.2$) and tangential skin drag ($C_{d,t} = 0.03$) coupled with 3D oceanic current shear layer.
+  - Benthic penalty contact mechanics preventing seabed penetration below $18.0\text{ m}$ with normal viscoelastic restoring forces ($k_{\text{bed}} = 22{,}000\text{ N/m}$) and Coulomb tangential friction ($\mu = 0.45$).
+  - Dirichlet boundary conditions anchoring Node 0 at surface TMS and Node $N-1$ at vehicle tether attachment, returning terminal tension body wrench $\boldsymbol{\tau}_{\text{tether}}^b$.
+- 15-State Continuous-Discrete Error-State Extended Kalman Filter (`src/navigationFilter.js`):
+  - Strapdown IMU mechanization predicting nominal position $\mathbf{p}$, velocity $\mathbf{v}$, and attitude quaternion $\mathbf{q} \in S^3$ at 100 Hz.
+  - Error-state formulation on $\delta\mathbf{x} \in \mathbb{R}^{15}$ (position error, velocity error, 3D tangent attitude error $\delta\boldsymbol{\theta}$, accelerometer bias $\mathbf{b}_a$, gyroscope bias $\mathbf{b}_g$).
+  - Multi-rate asynchronous measurement updates: DVL bottom-track velocity ($10\text{ Hz}$), hydrostatic depth pressure ($10\text{ Hz}$), fluxgate magnetic compass ($10\text{ Hz}$), and delayed Ultra-Short Baseline (USBL) acoustic beacon fixes ($0.5\text{--}1.0\text{ Hz}$).
+  - Analytical $3\sigma$ covariance bounds maintaining estimation error consistency across prolonged acoustic dropouts.
+- Automated Cable Dynamics & Navigation Unit Test Suite (`test/cable-navigation.test.js`):
+  - 8 new automated test cases verifying cable static catenary sag convergence, unilateral tension limits, Morison cross-flow drag directionality, benthic penalty floor limits, ES-EKF strapdown prediction, unit quaternion norm preservation, and multi-sensor covariance contraction.
+- Integrated `LumpedMassTether` dynamic option and continuous `NavigationFilter` observer in `src/physics.js`.
+- Expanded test suite to 51 passing unit tests (0 failures).
+
 ## [2.0.0] - 2026-10-13
 
 ### Added

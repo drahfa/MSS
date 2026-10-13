@@ -4,6 +4,8 @@ import { TetherModel } from './tether.js';
 import { ContactModel } from './contact.js';
 import { FailureInjector } from './failureInjection.js';
 import { SensorSuite } from './sensors.js';
+import { LumpedMassTether } from './lumpedMassTether.js';
+import { NavigationFilter } from './navigationFilter.js';
 
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 export const wrapPi = angle => ssa(angle);
@@ -235,8 +237,11 @@ export class RovDynamics {
     this.thrusterTarget = new Array(profile.thrusters.length).fill(0);
     this.failureInjector = new FailureInjector(profile.thrusters.length);
     this.tether = new TetherModel();
+    this.lumpedTether = new LumpedMassTether({ seabedDepth: 18.0 });
+    this.useLumpedTether = false;
     this.contact = new ContactModel();
     this.sensors = new SensorSuite();
+    this.navFilter = new NavigationFilter();
     this.tetherState = null;
     this.contactState = null;
     this.sensorReadings = null;
@@ -253,6 +258,8 @@ export class RovDynamics {
     this.thrusters.fill(0);
     this.thrusterTarget.fill(0);
     this.time = 0;
+    this.lumpedTether.reset([0, 0, 0.5], [this.state[6], this.state[7], this.state[8]]);
+    this.navFilter.reset([this.state[6], this.state[7], this.state[8]], 0.35);
   }
 
   getEuler() {
@@ -312,7 +319,26 @@ export class RovDynamics {
     // External interaction forces: umbilical tether and contact response
     const pos = this.state.slice(6, 9);
     const nu1 = this.state.slice(0, 3);
-    const tetherData = this.tether.compute(pos, nu1, R);
+    let tetherData;
+    if (this.useLumpedTether) {
+      const v_ned = [
+        R[0][0] * nu1[0] + R[0][1] * nu1[1] + R[0][2] * nu1[2],
+        R[1][0] * nu1[0] + R[1][1] * nu1[1] + R[1][2] * nu1[2],
+        R[2][0] * nu1[0] + R[2][1] * nu1[1] + R[2][2] * nu1[2],
+      ];
+      const lumpedRes = this.lumpedTether.step(dt, [0, 0, 0.5], pos, v_ned, R, currentSpeed, this.current.direction);
+      const payout = Math.hypot(pos[0], pos[1], pos[2] - 0.5);
+      tetherData = {
+        payout,
+        tension: lumpedRes.tensionMagnitude,
+        totalForceBody: [lumpedRes.wrenchBody[0], lumpedRes.wrenchBody[1], lumpedRes.wrenchBody[2]],
+        snag: lumpedRes.tensionMagnitude > 1200,
+        advisory: lumpedRes.tensionMagnitude > 800,
+        nodes: lumpedRes.nodes,
+      };
+    } else {
+      tetherData = this.tether.compute(pos, nu1, R);
+    }
     const contactData = this.contact.evaluate(pos, nu1, R);
     this.tetherState = tetherData;
     this.contactState = contactData;
@@ -342,5 +368,21 @@ export class RovDynamics {
 
     // Sample synthetic instrument sensors
     this.sensorReadings = this.sensors.sample(this.state, null, R, dt);
+
+    // Feed real-time observations into continuous-discrete Error-State EKF
+    if (this.sensorReadings) {
+      if (this.sensorReadings.imu) {
+        this.navFilter.predict(dt, this.sensorReadings.imu.accel, this.sensorReadings.imu.rates);
+      }
+      if (this.sensorReadings.dvl && this.sensorReadings.dvl.bottomLock && this.sensorReadings.dvl.u !== null) {
+        this.navFilter.updateDVL([this.sensorReadings.dvl.u, this.sensorReadings.dvl.v, this.sensorReadings.dvl.w]);
+      }
+      if (this.sensorReadings.depth !== null && this.sensorReadings.depth !== undefined) {
+        this.navFilter.updateDepth(this.sensorReadings.depth);
+      }
+      if (this.sensorReadings.compass !== null && this.sensorReadings.compass !== undefined) {
+        this.navFilter.updateCompass(this.sensorReadings.compass);
+      }
+    }
   }
 }

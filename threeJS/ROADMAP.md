@@ -78,15 +78,27 @@ Completed in 2.0:
 
 This milestone must not be described as safety-critical or hardware-certified without an appropriate independent validation process.
 
-## 2.1 — Advanced Intervention & Robotics (Future Horizon)
+## 2.1 — Umbilical Dynamics & Navigation Fusion (Complete)
+
+Goal: replace single-catenary approximations and idealized odometry with high-fidelity multi-node lumped-mass cable physics and continuous-discrete Error-State Kalman Filter state estimation.
+Documented in dedicated IEEE Report: `to-publish/IEEE_CABLE_NAVIGATION_REPORT.md`.
+
+Completed in 2.1:
+- [x] Separate IEEE Paper initialized (`to-publish/IEEE_CABLE_NAVIGATION_REPORT.md` and brain artifact) for umbilical cable dynamics and navigation fusion
+- [x] $N$-Node Viscoelastic Lumped-Mass Umbilical Cable Model (`src/lumpedMassTether.js`) with 12 nodes, non-linear unilateral axial tension, viscoelastic damping, and Morison cross-flow/tangential drag
+- [x] Benthic penalty contact floor model ($18.0\text{ m}$ seabed boundary) with normal viscoelastic penalty reactions and Coulomb friction
+- [x] 15-State Error-State Extended Kalman Filter (ES-EKF) on $S^3 \times \mathbb{R}^{12}$ (`src/navigationFilter.js`) fusing 100 Hz IMU strapdown mechanization with multi-rate DVL, depth pressure, fluxgate compass, and low-rate USBL acoustic fixes
+- [x] Automated test suite expanded to 51/51 passing tests (`test/cable-navigation.test.js`)
+- [x] Integrated `LumpedMassTether` and `NavigationFilter` into physical simulation loop (`src/physics.js`)
+
+## 2.2 — Advanced Intervention & Robotics (Future Horizon)
 
 Goal: expand from observation/survey piloting into active subsea intervention and hardware-in-the-loop interoperability.
 
-- Multi-node lumped-mass umbilical cable dynamics ($N$-node finite segment cable with bending stiffness and benthic drape)
-- Ultra-Short Baseline (USBL) acoustic positioning and Extended Kalman Filter (EKF) sensor fusion
 - Subsea robotic manipulator arm kinematics (1-DOF grabber to 4-DOF articulated arm) with body reaction wrench coupling
 - Real-time WebRTC / WebSocket telemetry bridge for MAVLink / ROS 2 interoperability
 - Multi-pilot cooperative intervention (dual-ROV tandem tether handling)
+- Acoustic Doppler Current Profiler (ADCP) spatial velocity field reconstruction
 
 ## Maintenance backlog
 
