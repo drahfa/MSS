@@ -1,0 +1,357 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import createHabitat from './assets/underwater-research-habitat.mjs';
+import { RovDynamics, ROV_PROFILES, clamp } from './physics.js';
+import './style.css';
+
+const $ = id => document.getElementById(id);
+const sim = new RovDynamics();
+const keys = new Set();
+let running = true, assist = true, showTrail = true, cameraMode = 0, demoMode = false;
+let targetDepth = 2, targetHeading = sim.state[11], accumulator = 0, last = performance.now();
+let demoLeg = 0, demoLegStarted = 0, assistBeforeDemo = true, cameraBeforeDemo = 0;
+const depthHistory = [];
+const demoRoute = [
+  { n: 4,  e: -1,  d: 4,  label: 'Descent check' },
+  { n: 11, e: -10, d: 8,  label: 'Habitat approach' },
+  { n: 18, e: -10, d: 11, label: 'West inspection' },
+  { n: 19, e: -3,  d: 10, label: 'East inspection' },
+  { n: 9,  e: 1,   d: 6,  label: 'Return arc' },
+  { n: 2,  e: 0,   d: 3,  label: 'Station keeping' },
+];
+
+const sceneHost = $('scene');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x052330);
+scene.fog = new THREE.FogExp2(0x052330, 0.035);
+const camera = new THREE.PerspectiveCamera(52, 1, 0.05, 180);
+camera.position.set(5, 3.2, 6);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+sceneHost.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 2.2;
+controls.maxDistance = 18;
+controls.maxPolarAngle = Math.PI * 0.82;
+const cameraLookTarget = new THREE.Vector3();
+// Blender authors the shaft on local Z. Its glTF Y-up conversion maps the
+// exported blade-plane normal to the rotor node's local Y axis.
+const rotorShaftAxis = new THREE.Vector3(0, 1, 0);
+const cameraNames = ['Third person', 'Top down', 'FPV'];
+const modelLoader = new GLTFLoader();
+const modelCache = new Map();
+let vehicleKey = 'inspection';
+
+scene.add(new THREE.HemisphereLight(0x70d6da, 0x07151b, 1.5));
+const keyLight = new THREE.DirectionalLight(0xb5fbff, 2.8);
+keyLight.position.set(-4, 7, 3);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(1024, 1024);
+scene.add(keyLight);
+
+function enableShadows(object) {
+  object.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+  return object;
+}
+
+// Polyfork assets are authored Y-up in metres and face +Z. The child offset
+// puts the submarine's hydrodynamic origin near its geometric centre; the
+// PI yaw maps its +Z nose to the simulator's North (-Z) at heading zero.
+const rov = new THREE.Group();
+rov.rotation.order = 'YXZ';
+let rovModel = null;
+
+const rovLights = [];
+[-.34, .34].forEach(x => {
+  const spot = new THREE.SpotLight(0xbaf8ff, 28, 22, .24, .7, 1.3);
+  spot.position.set(x, .12, -1.1);
+  spot.target.position.set(x, -.25, -10);
+  rov.add(spot, spot.target);
+  rovLights.push({ spot, target: spot.target, side: Math.sign(x) });
+});
+scene.add(rov);
+
+async function loadRovClass(key) {
+  const profile = ROV_PROFILES[key];
+  $('rovClass').disabled = true;
+  $('statusText').textContent = `Loading ${profile.name.toLowerCase()} vehicle`;
+  try {
+    let source = modelCache.get(key);
+    if (!source) {
+      source = (await modelLoader.loadAsync(`/models/rov-${key}.glb`)).scene;
+      modelCache.set(key, source);
+    }
+    const nextModel = enableShadows(source.clone(true));
+    nextModel.rotation.y = Math.PI;
+    nextModel.userData.rotors = [];
+    nextModel.traverse(child => {
+      if (child.name.startsWith('rotor_')) nextModel.userData.rotors.push(child);
+    });
+    nextModel.userData.rotors.sort((a, b) => Number(a.userData.channel_index) - Number(b.userData.channel_index));
+    if (rovModel) rov.remove(rovModel);
+    rovModel = nextModel;
+    rov.add(rovModel);
+    vehicleKey = key;
+    sim.configure(key);
+    renderThrusterChannels(profile);
+    const lightScale = profile.leverScale;
+    rovLights.forEach(({spot,target,side}) => {
+      spot.position.set(side * .34 * lightScale, .12 * lightScale, -.72 * lightScale);
+      target.position.set(side * .25 * lightScale, -.18 * lightScale, -8 * lightScale);
+      spot.distance = Math.max(14, profile.cameraDistance * 2.2);
+    });
+    $('vehicleSpec').textContent = `${profile.mass.toLocaleString()} kg · ${profile.role} · ${profile.thrusters.length} thrusters`;
+    $('vehicleStateLabel').textContent = `${profile.name} vehicle state`;
+    reset();
+  } catch (error) {
+    console.error(error);
+    $('statusText').textContent = `Could not load ${profile.name.toLowerCase()} model`;
+  } finally {
+    $('rovClass').disabled = false;
+  }
+}
+
+const floorGeo = new THREE.PlaneGeometry(120, 120, 90, 90);
+const pos = floorGeo.attributes.position;
+for (let i = 0; i < pos.count; i++) {
+  const x = pos.getX(i), y = pos.getY(i);
+  pos.setZ(i, .42 * Math.sin(x * .13) * Math.cos(y * .17) + .17 * Math.sin((x + y) * .5));
+}
+floorGeo.computeVertexNormals();
+const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x173c3d, roughness: .98, metalness: 0 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -18; floor.receiveShadow = true; scene.add(floor);
+
+const grid = new THREE.GridHelper(80, 80, 0x34777a, 0x17454d);
+grid.position.y = -17.94; grid.material.opacity = .24; grid.material.transparent = true; scene.add(grid);
+
+const habitat = enableShadows(createHabitat());
+habitat.position.set(-7, -17.92, -15);
+habitat.rotation.y = -.34;
+scene.add(habitat);
+
+const particles = new THREE.BufferGeometry();
+const particleData = new Float32Array(900 * 3);
+for (let i = 0; i < particleData.length; i += 3) { particleData[i] = (Math.random()-.5)*40; particleData[i+1]=(Math.random()-.5)*28; particleData[i+2]=(Math.random()-.5)*40; }
+particles.setAttribute('position', new THREE.BufferAttribute(particleData, 3));
+const motes = new THREE.Points(particles, new THREE.PointsMaterial({ color: 0x8eced0, size: .025, transparent: true, opacity: .48 })); scene.add(motes);
+
+const trailPoints = Array.from({length: 240}, () => new THREE.Vector3());
+const trailGeo = new THREE.BufferGeometry().setFromPoints(trailPoints);
+const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x4de0d1, transparent: true, opacity: .78 }));
+scene.add(trail);
+let lastTrailTime = 0;
+
+const markerMat = new THREE.MeshBasicMaterial({ color: 0xf0b451, wireframe: true, transparent: true, opacity: .68 });
+[[6,-5,-7],[-7,-7,-13],[3,8,-16]].forEach(([x,z,y]) => { const marker = new THREE.Mesh(new THREE.TorusGeometry(.36,.025,8,32), markerMat); marker.rotation.x=Math.PI/2; marker.position.set(x,y,z); scene.add(marker); });
+
+function renderThrusterChannels(profile) {
+  const panel = $('thrusters');
+  panel.replaceChildren();
+  profile.thrusters.forEach((thruster, index) => {
+    const channel = document.createElement('div');
+    channel.innerHTML = `<span><strong>${thruster.id}</strong>${thruster.label}</span><i><b id="thruster${index + 1}"></b></i><small>±${thruster.force.toLocaleString()} N</small>`;
+    panel.appendChild(channel);
+  });
+  panel.setAttribute('aria-label', `${profile.thrusters.length} thruster outputs for ${profile.name}`);
+}
+
+function axis(positive, negative) { return (keys.has(positive) ? 1 : 0) - (keys.has(negative) ? 1 : 0); }
+function readPilot() { return { surge: axis('KeyW','KeyS'), sway: axis('KeyD','KeyA'), heave: axis('KeyF','KeyR'), yaw: axis('KeyE','KeyQ') }; }
+
+function syncStatus() {
+  const leg = demoRoute[demoLeg];
+  $('statusText').textContent = !running ? (demoMode ? 'Demo paused' : 'Simulation paused') : demoMode ? `Demo route · ${leg.label}` : 'Simulation live';
+  $('pauseButton').childNodes[0].nodeValue = running ? 'Pause ' : 'Resume ';
+  document.body.classList.toggle('paused', !running);
+}
+function updateModeIndicators() {
+  ['stationIndicator','headingIndicator','depthIndicator'].forEach(id => $(id).classList.toggle('active', assist));
+  $('demoIndicator').classList.toggle('active', demoMode);
+}
+function togglePause() { running = !running; syncStatus(); }
+function reset() { sim.reset(); targetDepth=2; targetHeading=sim.state[11]; demoLeg=0; demoLegStarted=sim.time; depthHistory.length=0; trailPoints.forEach(p=>p.set(0,0,0)); trailGeo.setFromPoints(trailPoints); syncStatus(); }
+function syncCameraButton() {
+  $('cameraButton').textContent = `${cameraNames[cameraMode]} `;
+  const shortcut = document.createElement('kbd');
+  shortcut.textContent = 'C';
+  $('cameraButton').appendChild(shortcut);
+  $('cameraButton').setAttribute('aria-label', `${cameraNames[cameraMode]} view; change camera`);
+}
+function changeCamera() { cameraMode=(cameraMode+1)%3; syncCameraButton(); }
+
+function toggleDemo() {
+  demoMode = !demoMode;
+  keys.clear();
+  if (demoMode) {
+    assistBeforeDemo = assist;
+    cameraBeforeDemo = cameraMode;
+    assist = true;
+    cameraMode = 0;
+    syncCameraButton();
+    running = true;
+    demoLeg = 0;
+    demoLegStarted = sim.time;
+    $('controlTitle').textContent = 'Autonomous demo';
+    $('controlDescription').textContent = 'The pilot follows a six-leg habitat inspection route.';
+  } else {
+    assist = assistBeforeDemo;
+    cameraMode = cameraBeforeDemo;
+    syncCameraButton();
+    targetDepth = sim.state[8];
+    targetHeading = sim.state[11];
+    $('controlTitle').textContent = 'Keyboard control';
+    $('controlDescription').textContent = 'Commands blend through a first-order actuator model.';
+  }
+  $('assistButton').classList.toggle('active', assist);
+  $('assistButton').setAttribute('aria-pressed', assist);
+  $('demoButton').setAttribute('aria-pressed', demoMode);
+  $('demoButton').textContent = demoMode ? 'Exit demo ' : 'Demo ';
+  const shortcut = document.createElement('kbd'); shortcut.textContent = '~'; $('demoButton').appendChild(shortcut);
+  document.body.classList.toggle('demo', demoMode);
+  updateModeIndicators();
+  syncStatus();
+}
+
+window.addEventListener('keydown', event => {
+  if (['Space','KeyW','KeyA','KeyS','KeyD','KeyR','KeyF','KeyQ','KeyE'].includes(event.code)) event.preventDefault();
+  if (!event.repeat && event.code === 'Space') togglePause();
+  if (!event.repeat && event.code === 'KeyX') reset();
+  if (!event.repeat && event.code === 'KeyC') changeCamera();
+  if (!event.repeat && event.code === 'KeyH') $('assistButton').click();
+  if (!event.repeat && event.code === 'Backquote') toggleDemo();
+  keys.add(event.code);
+});
+window.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('blur', () => keys.clear());
+$('pauseButton').addEventListener('click', togglePause);
+$('resetButton').addEventListener('click', reset);
+$('demoButton').addEventListener('click', toggleDemo);
+$('cameraButton').addEventListener('click', changeCamera);
+$('trailButton').addEventListener('click', () => { showTrail=!showTrail; trail.visible=showTrail; $('trailButton').textContent=`Trail ${showTrail?'on':'off'}`; $('trailButton').setAttribute('aria-pressed', showTrail); });
+$('assistButton').addEventListener('click', () => { if (demoMode) return; assist=!assist; $('assistButton').classList.toggle('active',assist); $('assistButton').setAttribute('aria-pressed',assist); targetDepth=sim.state[8]; targetHeading=sim.state[11]; updateModeIndicators(); });
+$('current').addEventListener('input', event => { sim.current.speed=Number(event.target.value); $('currentOutput').textContent=`${sim.current.speed.toFixed(2)} m/s`; });
+$('rovClass').addEventListener('change', event => loadRovClass(event.target.value));
+
+function resize() { const {clientWidth:w,clientHeight:h}=sceneHost; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(sceneHost);
+
+function updateSimulation(frameDt) {
+  let pilot = readPilot();
+  if (demoMode) {
+    const waypoint = demoRoute[demoLeg];
+    const dn = waypoint.n - sim.state[6], de = waypoint.e - sim.state[7];
+    const horizontalDistance = Math.hypot(dn, de);
+    const course = Math.atan2(de, dn);
+    const relativeBearing = Math.atan2(Math.sin(course - sim.state[11]), Math.cos(course - sim.state[11]));
+    const demand = clamp(horizontalDistance * .14, .18, .72);
+    pilot = {
+      surge: clamp(Math.cos(relativeBearing) * demand, -.55, .72),
+      sway: clamp(Math.sin(relativeBearing) * demand, -.62, .62),
+      heave: 0,
+      yaw: 0,
+    };
+    targetDepth = waypoint.d;
+    targetHeading = course;
+    if ((horizontalDistance < 1.35 && Math.abs(waypoint.d - sim.state[8]) < .75) || sim.time - demoLegStarted > 28) {
+      demoLeg = (demoLeg + 1) % demoRoute.length;
+      demoLegStarted = sim.time;
+      syncStatus();
+    }
+  }
+  if (assist) {
+    if (pilot.heave) targetDepth = clamp(targetDepth + pilot.heave * frameDt * .65, .3, 30);
+    if (pilot.yaw) targetHeading = sim.state[11];
+  }
+  sim.setPilot(pilot, assist, { depth: targetDepth, heading: targetHeading });
+  accumulator += Math.min(frameDt, .05);
+  while (accumulator >= .01) { sim.step(.01); accumulator -= .01; }
+}
+
+function updateVisuals(dt) {
+  const [u,v,w,p,q,r,n,e,d,phi,theta,psi] = sim.state;
+  // MSS NED/FSD -> Three.js: East=X, Up=Y, North=-Z.
+  rov.position.set(e, -d, -n);
+  rov.rotation.set(theta, -psi, -phi);
+  const follow = new THREE.Vector3(e,-d,-n);
+  if (cameraMode === 0) {
+    const forward = new THREE.Vector3(
+      Math.sin(psi) * Math.cos(theta),
+      Math.sin(theta),
+      -Math.cos(psi) * Math.cos(theta),
+    ).normalize();
+    const flatForward = new THREE.Vector3(forward.x, 0, forward.z).normalize();
+    const chaseDistance = sim.profile.cameraDistance;
+    const desiredPosition = follow.clone().addScaledVector(flatForward, -chaseDistance).add(new THREE.Vector3(0, Math.max(2.1, chaseDistance * .4), 0));
+    const desiredLook = follow.clone().addScaledVector(forward, 2.25).add(new THREE.Vector3(0, .2, 0));
+    camera.up.set(0, 1, 0);
+    camera.position.lerp(desiredPosition, 1-Math.exp(-dt*3.2));
+    cameraLookTarget.lerp(desiredLook, 1-Math.exp(-dt*4.4));
+    camera.lookAt(cameraLookTarget);
+    controls.enabled=false;
+  } else if (cameraMode === 1) {
+    camera.up.set(0, 0, -1);
+    camera.position.lerp(follow.clone().add(new THREE.Vector3(0,10,.01)), 1-Math.exp(-dt*3));
+    camera.lookAt(follow);
+    controls.enabled=false;
+  } else {
+    camera.up.set(0, 1, 0);
+    const fpvScale = sim.profile.leverScale;
+    const offset = new THREE.Vector3(.15*fpvScale,.18*fpvScale,-.48*fpvScale).applyAxisAngle(new THREE.Vector3(0,1,0),-psi); camera.position.copy(follow.clone().add(offset));
+    camera.lookAt(follow.clone().add(new THREE.Vector3(Math.sin(psi)*8,-theta*5,-Math.cos(psi)*8))); controls.enabled=false;
+  }
+  if (controls.enabled) controls.update();
+  rovModel?.userData.tick?.(sim.time);
+  // Compose the spin on the exported node's local shaft axis so horizontal
+  // and vertical thrusters retain their independently authored orientation.
+  rovModel?.userData.rotors?.forEach((rotor, index) => {
+    const channel = Number.isInteger(rotor.userData.channel_index) ? rotor.userData.channel_index : index;
+    const command = sim.thrusters[channel] ?? 0;
+    rotor.rotateOnAxis(rotorShaftAxis, dt * 28 * command);
+  });
+  habitat.userData.tick?.(sim.time);
+  motes.position.x += sim.current.speed * dt * .08;
+  if (sim.time-lastTrailTime>.12) { lastTrailTime=sim.time; trailPoints.shift(); trailPoints.push(follow.clone()); trailGeo.setFromPoints(trailPoints); }
+}
+
+function drawDepthChart() {
+  const canvas=$('depthChart'), ctx=canvas.getContext('2d'), w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h); ctx.strokeStyle='rgba(144,196,198,.16)'; ctx.lineWidth=1;
+  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,i*h/4);ctx.lineTo(w,i*h/4);ctx.stroke();}
+  if(depthHistory.length<2)return;
+  const values=depthHistory.map(x=>x.depth), min=Math.min(...values,targetDepth)-.5,max=Math.max(...values,targetDepth)+.5, span=Math.max(1,max-min);
+  const y=v=>h-(v-min)/span*h;
+  ctx.setLineDash([7,7]);ctx.strokeStyle='#e8ae55';ctx.beginPath();ctx.moveTo(0,y(targetDepth));ctx.lineTo(w,y(targetDepth));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#52d4cc';ctx.lineWidth=3;ctx.beginPath();depthHistory.forEach((x,i)=>{const px=i/(depthHistory.length-1)*w,py=y(x.depth);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();
+}
+
+let uiClock=0;
+function updateUI(dt) {
+  uiClock+=dt; if(uiClock<.08)return; uiClock=0;
+  const [u,v,w,,,r,,,d,phi,theta,psi]=sim.state;
+  const degrees=x=>x*180/Math.PI, hdg=(degrees(psi)+360)%360;
+  $('depth').textContent=d.toFixed(2); $('depthReadout').textContent=`${d.toFixed(1)} m`; $('depthTarget').textContent=`${targetDepth.toFixed(2)} m`;
+  $('depthBar').style.width=`${clamp(d/30*100,1,100)}%`; $('roll').textContent=`${degrees(phi).toFixed(1)}°`; $('pitch').textContent=`${degrees(theta).toFixed(1)}°`;
+  $('heading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingReadout').textContent=`HDG ${String(Math.round(hdg)).padStart(3,'0')}°`;
+  $('compassHeading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingDial').style.setProperty('--heading',`${-hdg}deg`);
+  $('speed').textContent=`${Math.hypot(u,v,w).toFixed(2)} m/s`; $('surge').textContent=`${u.toFixed(2)} m/s`; $('sway').textContent=`${v.toFixed(2)} m/s`; $('heave').textContent=`${w.toFixed(2)} m/s`; $('altitude').textContent=`${Math.max(0,18-d).toFixed(2)} m`; $('currentValue').textContent=`${sim.current.speed.toFixed(2)} m/s`;
+  $('attitudeDial').style.setProperty('--roll',`${-degrees(phi)}deg`); $('attitudeDial').style.setProperty('--pitch',`${clamp(degrees(theta)*.8,-24,24)}px`);
+  const minutes=Math.floor(sim.time/60),seconds=(sim.time%60).toFixed(1).padStart(4,'0'); $('elapsed').textContent=`${String(minutes).padStart(2,'0')}:${seconds}`;
+  let load=0; sim.thrusters.forEach((x,i)=>{ $('thruster'+(i+1)).style.setProperty('--load',`${Math.abs(x)*100}%`); $('thruster'+(i+1)).classList.toggle('reverse',x<0); load+=x*x; });
+  $('powerValue').textContent=`${Math.round(Math.sqrt(load/sim.thrusters.length)*100)}%`;
+  depthHistory.push({time:sim.time,depth:d}); while(depthHistory.length>375)depthHistory.shift(); drawDepthChart();
+}
+
+function animate(now) {
+  requestAnimationFrame(animate); const dt=Math.min((now-last)/1000,.05); last=now;
+  if(running) updateSimulation(dt); updateVisuals(dt); updateUI(dt); renderer.render(scene,camera);
+}
+resize(); requestAnimationFrame(animate);
+updateModeIndicators();
+loadRovClass(vehicleKey);

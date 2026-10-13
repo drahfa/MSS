@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#03131c" />
+    <meta name="description" content="Interactive 6-DOF ROV simulator adapted from the Marine Systems Simulator dynamics." />
+    <title>MSS // ROV simulator</title>
+  </head>
+  <body>
+    <main class="console-shell">
+      <header class="topbar">
+        <div class="identity">
+          <svg class="mark" viewBox="0 0 42 42" aria-hidden="true">
+            <path d="M8 11h26v20H8zM13 7v28M29 7v28M4 17h34M4 25h34" />
+            <circle cx="21" cy="21" r="4" />
+          </svg>
+          <div><h1>ROV simulator</h1><p>MSS nonlinear 6-DOF plant</p></div>
+        </div>
+        <div class="mission-state"><span class="pulse"></span><span id="statusText">Simulation live</span></div>
+        <div class="clock"><span>Elapsed</span><strong id="elapsed">00:00.0</strong></div>
+      </header>
+
+      <section class="viewport-panel" aria-label="Three-dimensional ROV simulation">
+        <div id="scene" role="img" aria-label="ROV moving above a seabed in three dimensions"></div>
+        <div class="vehicle-picker">
+          <label for="rovClass">ROV class</label>
+          <select id="rovClass">
+            <option value="hobbyist">Hobbyist</option>
+            <option value="observation">Observation</option>
+            <option value="inspection" selected>Inspection</option>
+            <option value="light-work">Light work</option>
+            <option value="heavy-work">Heavy work</option>
+          </select>
+          <small id="vehicleSpec">85 kg · Survey + intervention · 1,000 m</small>
+        </div>
+        <div class="depth-ruler" aria-hidden="true"><span>0 m</span><i></i><span>10</span><i></i><span>20</span><i></i><span>30</span></div>
+        <div class="viewport-tools">
+          <button id="demoButton" type="button" aria-pressed="false">Demo <kbd>~</kbd></button>
+          <button id="cameraButton" type="button" aria-label="Change camera view">Third person <kbd>C</kbd></button>
+          <button id="trailButton" type="button" aria-pressed="true">Trail on</button>
+        </div>
+        <div class="reticle" aria-hidden="true"><span></span></div>
+        <div class="viewport-readout">
+          <span id="headingReadout">HDG 000°</span>
+          <strong id="depthReadout">2.0 m</strong>
+          <span>DEPTH</span>
+        </div>
+      </section>
+
+      <aside class="telemetry-panel" aria-label="Vehicle telemetry">
+        <section class="telemetry-lead">
+          <p id="vehicleStateLabel">Inspection vehicle state</p>
+          <div class="depth-number"><strong id="depth">2.00</strong><span>m</span></div>
+          <div class="depth-track"><i id="depthBar"></i></div>
+          <div class="pair"><span>Depth setpoint</span><b id="depthTarget">2.00 m</b></div>
+        </section>
+
+        <section class="systems-block" aria-label="Automatic control status">
+          <div class="annunciators">
+            <div class="active"><i></i><span>ROV PDU</span></div>
+            <div id="stationIndicator" class="active"><i></i><span>Station keep</span></div>
+            <div id="headingIndicator" class="active"><i></i><span>Auto heading</span></div>
+            <div id="depthIndicator" class="active"><i></i><span>Auto depth</span></div>
+            <div id="demoIndicator"><i></i><span>Demo route</span></div>
+            <div><i></i><span>Tether clear</span></div>
+          </div>
+        </section>
+
+        <section class="flight-instruments">
+          <div class="nav-dials">
+            <div class="attitude-dial" id="attitudeDial" aria-label="Artificial horizon">
+              <div class="horizon"><div class="horizon-line"></div></div>
+              <div class="airframe">⌄<i></i>⌄</div>
+            </div>
+            <div class="heading-dial" id="headingDial" aria-label="Heading compass">
+              <div class="compass-rose"><b class="north">N</b><b class="east">E</b><b class="south">S</b><b class="west">W</b></div>
+              <i class="heading-index"></i>
+              <strong id="compassHeading">020°</strong>
+            </div>
+          </div>
+          <div class="attitude-values">
+            <div><span>Roll</span><b id="roll">0.0°</b></div>
+            <div><span>Pitch</span><b id="pitch">0.0°</b></div>
+            <div><span>Heading</span><b id="heading">000°</b></div>
+          </div>
+        </section>
+
+        <section class="data-grid">
+          <div><span>Speed</span><b id="speed">0.00 m/s</b></div>
+          <div><span>Current</span><b id="currentValue">0.18 m/s</b></div>
+          <div><span>Surge</span><b id="surge">0.00</b></div>
+          <div><span>Sway</span><b id="sway">0.00</b></div>
+          <div><span>Heave</span><b id="heave">0.00</b></div>
+          <div><span>Altitude</span><b id="altitude">16.00 m</b></div>
+        </section>
+
+        <section class="history-block">
+          <div class="section-heading"><span>Depth trace</span><small>last 30 s</small></div>
+          <canvas id="depthChart" width="520" height="150" aria-label="Recent depth chart"></canvas>
+        </section>
+
+        <section class="thruster-block">
+          <div class="section-heading"><span>Thruster load</span><small id="powerValue">0%</small></div>
+          <div id="thrusters" class="thrusters" aria-label="Thruster outputs"></div>
+        </section>
+      </aside>
+
+      <section class="control-deck" aria-label="ROV controls">
+        <div class="control-copy">
+          <span>Pilot input</span>
+          <strong id="controlTitle">Keyboard control</strong>
+          <p id="controlDescription">Commands blend through a first-order actuator model.</p>
+        </div>
+        <div class="key-groups">
+          <div class="key-group"><span>Translate</span><div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div></div>
+          <div class="key-group"><span>Depth</span><div><kbd>R</kbd><kbd>F</kbd></div></div>
+          <div class="key-group"><span>Yaw</span><div><kbd>Q</kbd><kbd>E</kbd></div></div>
+        </div>
+        <div class="environment-control">
+          <label for="current">Current <output id="currentOutput">0.18 m/s</output></label>
+          <input id="current" type="range" min="0" max="0.8" value="0.18" step="0.01" />
+        </div>
+        <div class="action-stack">
+          <button id="assistButton" class="mode-button active" type="button" aria-pressed="true"><span>Assist</span><b>Depth + attitude hold</b></button>
+          <button id="pauseButton" class="primary-button" type="button">Pause <kbd>Space</kbd></button>
+          <button id="resetButton" class="text-button" type="button">Reset vehicle <kbd>X</kbd></button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
