@@ -37,6 +37,7 @@
         <div class="depth-ruler" aria-hidden="true"><span>0 m</span><i></i><span>10</span><i></i><span>20</span><i></i><span>30</span></div>
         <div class="viewport-tools">
           <button id="profileButton" type="button" aria-label="Profile parameter import/export">Profile JSON</button>
+          <button id="scenarioBtn" type="button">Scenario: Free</button>
           <button id="recordButton" type="button" aria-pressed="false">Rec Telemetry</button>
           <button id="faultButton" type="button">Fault: None</button>
           <button id="demoButton" type="button" aria-pressed="false">Demo <kbd>~</kbd></button>
@@ -57,6 +58,17 @@
           <div class="depth-number"><strong id="depth">2.00</strong><span>m</span></div>
           <div class="depth-track"><i id="depthBar"></i></div>
           <div class="pair"><span>Depth setpoint</span><b id="depthTarget">2.00 m</b></div>
+        </section>
+
+        <section class="systems-block" id="scoringSection" style="display:none; border-left: 2px solid var(--amber);">
+          <div class="section-heading"><span>Flight Score</span><small id="scenarioTitle">Free Flight</small></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin: 6px 0;">
+            <strong id="liveScore" style="font-size:26px; color:var(--cyan); font-variant-numeric:tabular-nums;">100.0</strong>
+            <span id="liveGrade" style="font-size:16px; font-weight:600; color:var(--amber);">Grade A</span>
+          </div>
+          <div class="pair"><span>Waypoint Progress</span><b id="scoreWaypoint">1 / 5</b></div>
+          <div class="pair"><span>RMS Corridor Dev</span><b id="scoreRmsCte">0.00 m</b></div>
+          <div class="pair"><span>Infractions</span><b id="scoreInfractions" style="color:#6e9298;">None</b></div>
         </section>
 
         <section class="systems-block" aria-label="Automatic control status">

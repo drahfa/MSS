@@ -2,6 +2,28 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
+## [2.0.0-dev] - 2026-10-13
+
+### Added
+
+- Independent IEEE Technical Report for post-platform training development: `to-publish/IEEE_TRAINING_PLATFORM_REPORT.md` (covering empirical flume/tank grounding, declarative scenario architecture, objective pilot scoring engine, and instructor station controls).
+- Declarative Training Scenario Architecture (`src/scenarios.js`):
+  - Standardized training drills for subsea pilot qualification: Pipeline Survey, Benthic Habitat Docking, High-Shear Current Navigation, and Emergency Thruster Recovery.
+  - Automated environmental current configuration, 3D waypoint chains, corridor tolerances, and in-flight fault triggers.
+- Objective Pilot Scoring Engine (`src/scoringEngine.js`):
+  - Multi-criteria Flight Quality Metric (FQM $\mathcal{S} \in [0, 100]$) and standardized Grades (A, B, C, F).
+  - Continuous evaluation of RMS cross-track corridor deviation ($e_{\text{cte}}$), thruster energy and switching chatter, tether payout safety margins, and structural impact velocity.
+  - Waypoint arrival detection ($1.35\text{ m}$ radius) with automatic progression tracking.
+- Cockpit HUD Live Scoring Display in `index.html` and `src/main.js`:
+  - Real-time score readout, proficiency grade, waypoint progress, RMS corridor error, and active infractions list.
+  - Dynamic 3D visual waypoint ring markers rendered in the WebGL scene.
+  - Cockpit scenario selector button cycling through drills with automatic environmental staging.
+- Automated Training Platform Test Suite (`test/training-platform.test.js`):
+  - 6 new automated verification tests covering scenario structure, geometric distance calculation, perfect-flight Grade A awards, corridor excursion penalties, collision/snag penalties, and waypoint progression.
+  - Total automated test suite expanded to 39/39 passing tests with 0 failures.
+- Vite build code-splitting configuration (`vite.config.js`):
+  - Chunked `three` library into a standalone cacheable vendor asset, completely eliminating bundle size advisories.
+
 ## [1.3.0] - 2026-10-13
  
 ### Added

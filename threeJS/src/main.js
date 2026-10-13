@@ -6,6 +6,8 @@ import { RovDynamics, ROV_PROFILES, clamp } from './physics.js';
 import { validateProfile, formatProfileJson } from './mss/profileValidator.js';
 import { GamepadController } from './gamepad.js';
 import { TelemetryRecorder } from './telemetryRecorder.js';
+import { TRAINING_SCENARIOS } from './scenarios.js';
+import { ScoringEngine } from './scoringEngine.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -169,6 +171,53 @@ function renderThrusterChannels(profile) {
 const gamepad = new GamepadController();
 const telemetry = new TelemetryRecorder();
 let activeFaultIndex = 0;
+const scenarioMarkerGroup = new THREE.Group();
+scene.add(scenarioMarkerGroup);
+
+function updateScenarioMarkers(waypoints) {
+  scenarioMarkerGroup.clear();
+  if (!waypoints) return;
+  waypoints.forEach(wp => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 8, 32), markerMat);
+    ring.rotation.x = Math.PI / 2;
+    // NED to Three.js: East=X, Depth=-Y, North=-Z
+    ring.position.set(wp.e, -wp.d, -wp.n);
+    scenarioMarkerGroup.add(ring);
+  });
+}
+
+const scoringEngine = new ScoringEngine();
+const scenarioKeys = [null, 'pipeline-survey', 'habitat-docking', 'high-shear-nav', 'thruster-recovery'];
+let currentScenarioIdx = 0;
+
+function selectScenarioByIndex(idx) {
+  currentScenarioIdx = idx % scenarioKeys.length;
+  const key = scenarioKeys[currentScenarioIdx];
+  if (!key) {
+    scoringEngine.reset(null);
+    $('scoringSection').style.display = 'none';
+    $('scenarioBtn').textContent = 'Scenario: Free';
+    updateScenarioMarkers(null);
+  } else {
+    const sc = TRAINING_SCENARIOS[key];
+    scoringEngine.reset(sc);
+    $('scoringSection').style.display = 'block';
+    $('scenarioTitle').textContent = sc.title;
+    $('scenarioBtn').textContent = `Scenario: ${sc.title.split(' ')[0]}`;
+    sim.current.speed = sc.current.speed;
+    sim.current.direction = sc.current.direction;
+    $('currentOutput').textContent = `${sc.current.speed.toFixed(2)} m/s`;
+    $('current').value = sc.current.speed;
+    updateScenarioMarkers(sc.waypoints);
+    reset();
+    const startWp = sc.waypoints[0];
+    sim.state[6] = startWp.n;
+    sim.state[7] = startWp.e;
+    sim.state[8] = startWp.d;
+    targetDepth = startWp.d;
+  }
+}
+
 const faultModes = [
   { label: 'None', mode: 'OK', thruster: 0, val: 1.0 },
   { label: 'T1 50% Degraded', mode: 'DEGRADED', thruster: 0, val: 0.5 },
@@ -308,6 +357,10 @@ $('faultButton')?.addEventListener('click', () => {
     $('faultButton').style.borderColor = 'var(--coral)';
     $('faultButton').style.color = 'var(--coral)';
   }
+});
+
+$('scenarioBtn')?.addEventListener('click', () => {
+  selectScenarioByIndex(currentScenarioIdx + 1);
 });
 
 // Profile Parameter Import/Export & Real-Time Validation
@@ -468,6 +521,13 @@ function updateSimulation(frameDt) {
     if (telemetry.isRecording) {
       telemetry.recordFrame(sim.time, sim.state, sim.thrusters, pilot, assist);
     }
+    if (scenarioKeys[currentScenarioIdx]) {
+      const sc = TRAINING_SCENARIOS[scenarioKeys[currentScenarioIdx]];
+      scoringEngine.update(.01, sim.state.slice(6, 9), sim.state.slice(0, 6), sim.thrusters, sim.tetherState, sim.contactState);
+      if (sc.faultInjection && sim.time >= sc.faultInjection.triggerTime) {
+        sim.failureInjector.setFault(sc.faultInjection.thruster, sc.faultInjection.mode, 0.0);
+      }
+    }
     accumulator -= .01;
   }
 }
@@ -570,7 +630,15 @@ function updateUI(dt) {
   $('attitudeDial').style.setProperty('--roll',`${-degrees(phi)}deg`); $('attitudeDial').style.setProperty('--pitch',`${clamp(degrees(theta)*.8,-24,24)}px`);
   const minutes=Math.floor(sim.time/60),seconds=(sim.time%60).toFixed(1).padStart(4,'0'); $('elapsed').textContent=`${String(minutes).padStart(2,'0')}:${seconds}`;
   let load=0; sim.thrusters.forEach((x,i)=>{ $('thruster'+(i+1)).style.setProperty('--load',`${Math.abs(x)*100}%`); $('thruster'+(i+1)).classList.toggle('reverse',x<0); load+=x*x; });
-  $('powerValue').textContent=`${Math.round(Math.sqrt(load/sim.thrusters.length)*100)}%`;
+  if (scenarioKeys[currentScenarioIdx]) {
+    const scoreData = scoringEngine.computeScore();
+    $('liveScore').textContent = scoreData.score.toFixed(1);
+    $('liveGrade').textContent = `Grade ${scoreData.grade}`;
+    $('scoreWaypoint').textContent = scoreData.waypointProgress;
+    $('scoreRmsCte').textContent = `${scoreData.rmsCte.toFixed(2)} m`;
+    $('scoreInfractions').textContent = scoreData.infractions.length ? scoreData.infractions.join(', ') : 'None';
+    $('scoreInfractions').style.color = scoreData.infractions.length ? 'var(--coral)' : '#6e9298';
+  }
   depthHistory.push({time:sim.time,depth:d}); while(depthHistory.length>375)depthHistory.shift(); drawDepthChart();
 }
 
