@@ -146,6 +146,57 @@ export function ssa(angle) {
   return a - Math.floor(a / y) * y - Math.PI;
 }
 
+/** euler2q.m — Euler angles [phi, theta, psi] to unit quaternion [eta, eps1, eps2, eps3]. */
+export function euler2q(phi, theta, psi) {
+  const c1 = Math.cos(phi * 0.5), s1 = Math.sin(phi * 0.5);
+  const c2 = Math.cos(theta * 0.5), s2 = Math.sin(theta * 0.5);
+  const c3 = Math.cos(psi * 0.5), s3 = Math.sin(psi * 0.5);
+  return [
+    c1 * c2 * c3 + s1 * s2 * s3,
+    s1 * c2 * c3 - c1 * s2 * s3,
+    c1 * s2 * c3 + s1 * c2 * s3,
+    c1 * c2 * s3 - s1 * s2 * c3,
+  ];
+}
+
+/** q2euler.m — unit quaternion [eta, eps1, eps2, eps3] to Euler angles [phi, theta, psi]. */
+export function q2euler(q) {
+  const [eta, e1, e2, e3] = q;
+  const phi = Math.atan2(2 * (eta * e1 + e2 * e3), 1 - 2 * (e1 * e1 + e2 * e2));
+  const sinTheta = Math.min(1, Math.max(-1, 2 * (eta * e2 - e3 * e1)));
+  const theta = Math.asin(sinTheta);
+  const psi = Math.atan2(2 * (eta * e3 + e1 * e2), 1 - 2 * (e2 * e2 + e3 * e3));
+  return [phi, theta, psi];
+}
+
+/** Rotation matrix R in SO(3) directly from unit quaternion [eta, eps1, eps2, eps3]. */
+export function Rquat(q) {
+  const [eta, e1, e2, e3] = q;
+  return [
+    [1 - 2 * (e2 * e2 + e3 * e3), 2 * (e1 * e2 - eta * e3), 2 * (e1 * e3 + eta * e2)],
+    [2 * (e1 * e2 + eta * e3), 1 - 2 * (e1 * e1 + e3 * e3), 2 * (e2 * e3 - eta * e1)],
+    [2 * (e1 * e3 - eta * e2), 2 * (e2 * e3 + eta * e1), 1 - 2 * (e1 * e1 + e2 * e2)],
+  ];
+}
+
+/** Quaternion kinematic rate qdot = 0.5 * E(q) * omega. */
+export function qdot(q, omega) {
+  const [eta, e1, e2, e3] = q;
+  const [p, qm, r] = omega;
+  return [
+    -0.5 * (e1 * p + e2 * qm + e3 * r),
+     0.5 * (eta * p - e3 * qm + e2 * r),
+     0.5 * (e3 * p + eta * qm - e1 * r),
+     0.5 * (-e2 * p + e1 * qm + eta * r),
+  ];
+}
+
+/** Normalize quaternion to preserve unit length on S^3. */
+export function normalizeQuat(q) {
+  const norm = Math.hypot(q[0], q[1], q[2], q[3]);
+  return norm > 1e-12 ? [q[0] / norm, q[1] / norm, q[2] / norm, q[3] / norm] : [1, 0, 0, 0];
+}
+
 // ---------------------------------------------------------------------------
 // LIBRARY/modeling
 

@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  Smtrx, Hmtrx, Rzyx, Tzyx, eulerang, ssa, rbody, m2c, gRvect, rk4, mldivide, inv, matMul, eye, diag
+  Smtrx, Hmtrx, Rzyx, Tzyx, eulerang, ssa, rbody, m2c, gRvect, rk4, mldivide, inv, matMul, eye, diag,
+  euler2q, q2euler, Rquat, qdot, normalizeQuat
 } from '../src/mss/library.js';
 
 function assertMatrixClose(actual, expected, eps = 1e-7) {
@@ -128,3 +129,65 @@ test('rk4 integrates harmonic oscillator x_ddot + x = 0 accurately', () => {
   assert.ok(Math.abs(state[0] - Math.cos(1)) < 1e-5);
   assert.ok(Math.abs(state[1] - (-Math.sin(1))) < 1e-5);
 });
+
+test('euler2q and q2euler preserve angles across normal and steep pitch angles', () => {
+  const angles = [
+    [0, 0, 0],
+    [0.2, 0.4, 0.8],
+    [-0.35, 0.15, -1.2],
+    [0.1, 1.55, 0.5], // Steep pitch θ ≈ 88.8°
+    [-0.2, -1.56, 1.1], // Steep negative pitch θ ≈ -89.4°
+  ];
+
+  for (const [phi, theta, psi] of angles) {
+    const q = euler2q(phi, theta, psi);
+    // Unit length check
+    const norm = Math.hypot(...q);
+    assert.ok(Math.abs(norm - 1.0) < 1e-9, `Quaternion not unit norm: ${norm}`);
+
+    const [rPhi, rTheta, rPsi] = q2euler(q);
+    assert.ok(Math.abs(rPhi - phi) < 1e-6, `Roll mismatch: ${rPhi} vs ${phi}`);
+    assert.ok(Math.abs(rTheta - theta) < 1e-6, `Pitch mismatch: ${rTheta} vs ${theta}`);
+    assert.ok(Math.abs(rPsi - psi) < 1e-6, `Yaw mismatch: ${rPsi} vs ${psi}`);
+  }
+});
+
+test('Rquat produces orthogonal SO(3) matrix matching Rzyx', () => {
+  const phi = 0.25, theta = -0.42, psi = 1.15;
+  const q = euler2q(phi, theta, psi);
+  const Rq = Rquat(q);
+  const Rz = Rzyx(phi, theta, psi);
+
+  // 1. Rq equals Rz
+  assertMatrixClose(Rq, Rz, 1e-9);
+
+  // 2. Rq is orthogonal: Rq^T * Rq = I
+  const RqT = [
+    [Rq[0][0], Rq[1][0], Rq[2][0]],
+    [Rq[0][1], Rq[1][1], Rq[2][1]],
+    [Rq[0][2], Rq[1][2], Rq[2][2]],
+  ];
+  const prod = matMul(RqT, Rq);
+  assertMatrixClose(prod, eye(3), 1e-9);
+});
+
+test('qdot and rk4 integrate pure 3D rotation without gimbal singularity', () => {
+  // Angular rate omega = [0, 0.5, 0] (pure pitching through and past 90 degrees)
+  const omega = [0, 0.5, 0];
+  let q = euler2q(0, 0, 0); // start horizontal
+  const dt = 0.01;
+  const steps = 400; // t = 4s -> pitch reaches 2.0 rad (114.6°), well beyond 90° gimbal lock!
+
+  for (let i = 0; i < steps; i++) {
+    q = rk4((currQ) => qdot(currQ, omega), dt, q);
+    q = normalizeQuat(q);
+    assert.ok(!q.some(isNaN), 'Quaternion became NaN during pitch maneuver');
+    const norm = Math.hypot(...q);
+    assert.ok(Math.abs(norm - 1.0) < 1e-9, `Quaternion norm drifted: ${norm}`);
+  }
+
+  // Pitch angle after 4s at 0.5 rad/s should be exactly 2.0 rad (inverted beyond 90°)
+  const R = Rquat(q);
+  assert.ok(!R.some(row => row.some(isNaN)), 'Rotation matrix contains NaN');
+});
+

@@ -9,7 +9,7 @@ const $ = id => document.getElementById(id);
 const sim = new RovDynamics();
 const keys = new Set();
 let running = true, assist = true, showTrail = true, cameraMode = 0, demoMode = false;
-let targetDepth = 2, targetHeading = sim.state[11], accumulator = 0, last = performance.now();
+let targetDepth = 2, targetHeading = sim.getEuler()[2], accumulator = 0, last = performance.now();
 let demoLeg = 0, demoLegStarted = 0, assistBeforeDemo = true, cameraBeforeDemo = 0;
 const depthHistory = [];
 const demoRoute = [
@@ -177,7 +177,7 @@ function updateModeIndicators() {
   $('demoIndicator').classList.toggle('active', demoMode);
 }
 function togglePause() { running = !running; syncStatus(); }
-function reset() { sim.reset(); targetDepth=2; targetHeading=sim.state[11]; demoLeg=0; demoLegStarted=sim.time; depthHistory.length=0; lastTrailTime=0; trailPoints.forEach(p=>p.set(0,0,0)); trailGeo.setFromPoints(trailPoints); syncStatus(); }
+function reset() { sim.reset(); targetDepth=2; targetHeading=sim.getEuler()[2]; demoLeg=0; demoLegStarted=sim.time; depthHistory.length=0; lastTrailTime=0; trailPoints.forEach(p=>p.set(0,0,0)); trailGeo.setFromPoints(trailPoints); syncStatus(); }
 function syncCameraButton() {
   $('cameraButton').textContent = `${cameraNames[cameraMode]} `;
   const shortcut = document.createElement('kbd');
@@ -206,7 +206,7 @@ function toggleDemo() {
     cameraMode = cameraBeforeDemo;
     syncCameraButton();
     targetDepth = sim.state[8];
-    targetHeading = sim.state[11];
+    targetHeading = sim.getEuler()[2];
     $('controlTitle').textContent = 'Keyboard control';
     $('controlDescription').textContent = 'Commands blend through a first-order actuator model.';
   }
@@ -268,7 +268,7 @@ function updateSimulation(frameDt) {
   }
   if (assist) {
     if (pilot.heave) targetDepth = clamp(targetDepth + pilot.heave * frameDt * .65, .3, 30);
-    if (pilot.yaw) targetHeading = sim.state[11];
+    if (pilot.yaw) targetHeading = sim.getEuler()[2];
   }
   sim.setPilot(pilot, assist, { depth: targetDepth, heading: targetHeading });
   accumulator += Math.min(frameDt, .05);
@@ -276,7 +276,8 @@ function updateSimulation(frameDt) {
 }
 
 function updateVisuals(dt) {
-  const [u,v,w,p,q,r,n,e,d,phi,theta,psi] = sim.state;
+  const [n,e,d] = sim.state.slice(6, 9);
+  const [phi,theta,psi] = sim.getEuler();
   // MSS NED/FSD -> Three.js: East=X, Up=Y, North=-Z.
   rov.position.set(e, -d, -n);
   rov.rotation.set(theta, -psi, -phi);
@@ -341,7 +342,9 @@ function drawDepthChart() {
 let uiClock=0;
 function updateUI(dt) {
   uiClock+=dt; if(uiClock<.08)return; uiClock=0;
-  const [u,v,w,,,r,,,d,phi,theta,psi]=sim.state;
+  const [u,v,w] = sim.state.slice(0, 3);
+  const d = sim.state[8];
+  const [phi,theta,psi] = sim.getEuler();
   const degrees=x=>x*180/Math.PI, hdg=(degrees(psi)+360)%360;
   $('depth').textContent=d.toFixed(2); $('depthReadout').textContent=`${d.toFixed(1)} m`; $('depthTarget').textContent=`${targetDepth.toFixed(2)} m`;
   $('depthBar').style.width=`${clamp(d/30*100,1,100)}%`; $('roll').textContent=`${degrees(phi).toFixed(1)}°`; $('pitch').textContent=`${degrees(theta).toFixed(1)}°`;

@@ -20,7 +20,7 @@
 // wrapping, and scene envelope constraints live outside it in physics.js and
 // reach the plant only through the generalized force tau.
 
-import { diag, eulerang, gRvect, m2c, matAdd, matVec, mldivide, mssConstants, rbody, Smtrx, vecSub } from './library.js';
+import { diag, eulerang, gRvect, m2c, matAdd, matVec, mldivide, mssConstants, rbody, Smtrx, vecSub, qdot, Rquat } from './library.js';
 
 /**
  * Convert a simulator profile into an MSS-style vehicle structure. All
@@ -52,19 +52,42 @@ export function buildVehicle(profile) {
 /**
  * xdot = rovPlant(x, tau, vehicle, Vc, betaVc)
  *
- * @param {number[]} x       12-state [u v w p q r north east down phi theta psi]
+ * @param {number[]} x       13-state [u v w p q r N E D eta eps1 eps2 eps3] or legacy 12-state [u v w p q r N E D phi theta psi]
  * @param {number[]} tau     6x1 generalized force [X Y Z K M N] about the CO
  * @param {object}   vehicle Structure from buildVehicle()
- * @param {number}   Vc      Horizontal current speed (m/s)
+ * @param {number|Function} Vc Horizontal current speed (m/s) or depth function
  * @param {number}   betaVc  Current direction in the North-East frame (rad)
  */
 export function rovPlant(x, tau, vehicle, Vc = 0, betaVc = 0) {
   const nu = x.slice(0, 6);
-  const eta = x.slice(6, 12);
   const omega = nu.slice(3, 6);
+  const isQuat = x.length >= 13;
 
-  // Irrotational North-East current expressed in BODY (hydroVessel.m)
-  const v_c = [Vc * Math.cos(betaVc - eta[5]), Vc * Math.sin(betaVc - eta[5]), 0];
+  let R, posDot, qDot, etaDot, v_c;
+
+  if (isQuat) {
+    const pos = x.slice(6, 9);
+    const q = x.slice(9, 13);
+    R = Rquat(q);
+    // Irrotational current expressed in BODY using exact quaternion rotation R^T * v_c^n
+    const currentSpeed = typeof Vc === 'function' ? Vc(pos[2]) : Vc;
+    const vc_n = [currentSpeed * Math.cos(betaVc), currentSpeed * Math.sin(betaVc), 0];
+    v_c = [
+      R[0][0] * vc_n[0] + R[1][0] * vc_n[1] + R[2][0] * vc_n[2],
+      R[0][1] * vc_n[0] + R[1][1] * vc_n[1] + R[2][1] * vc_n[2],
+      R[0][2] * vc_n[0] + R[1][2] * vc_n[1] + R[2][2] * vc_n[2],
+    ];
+    posDot = matVec(R, nu.slice(0, 3));
+    qDot = qdot(q, omega);
+  } else {
+    const eta = x.slice(6, 12);
+    const currentSpeed = typeof Vc === 'function' ? Vc(eta[2]) : Vc;
+    v_c = [currentSpeed * Math.cos(betaVc - eta[5]), currentSpeed * Math.sin(betaVc - eta[5]), 0];
+    const { J, J1 } = eulerang(eta[3], eta[4], eta[5]);
+    R = J1;
+    etaDot = matVec(J, nu);
+  }
+
   const nu_c = [...v_c, 0, 0, 0];
   const Sv = matVec(Smtrx(omega), v_c);
   const Dnu_c = [-Sv[0], -Sv[1], -Sv[2], 0, 0, 0];
@@ -79,13 +102,12 @@ export function rovPlant(x, tau, vehicle, Vc = 0, betaVc = 0) {
   const D = vehicle.DL.map((row, i) => row.map((d, j) => (i === j ? d + vehicle.Dn[i] * Math.abs(nu_r[i]) : d)));
 
   // Kinematics and restoring forces
-  const { J, J1: R } = eulerang(eta[3], eta[4], eta[5]);
   const g = gRvect(vehicle.W, vehicle.B, R, vehicle.r_bG, vehicle.r_bB);
 
   const Cnu = matVec(C, nu_r);
   const Dnu = matVec(D, nu_r);
   const rhs = tau.map((t, i) => t - Cnu[i] - Dnu[i] - g[i]);
   const nuDot = mldivide(vehicle.M, rhs).map((v, i) => Dnu_c[i] + v);
-  const etaDot = matVec(J, nu);
-  return [...nuDot, ...etaDot];
+
+  return isQuat ? [...nuDot, ...posDot, ...qDot] : [...nuDot, ...etaDot];
 }

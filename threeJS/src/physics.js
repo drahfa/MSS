@@ -1,5 +1,5 @@
 import { buildVehicle, rovPlant } from './mss/rovPlant.js';
-import { rk4, ssa } from './mss/library.js';
+import { rk4, ssa, euler2q, q2euler, Rquat, normalizeQuat } from './mss/library.js';
 
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 export const wrapPi = angle => ssa(angle);
@@ -214,7 +214,7 @@ export function makeAllocator(profile) {
 
 export class RovDynamics {
   constructor(profileKey = 'inspection') {
-    this.state = new Array(12).fill(0);
+    this.state = new Array(13).fill(0);
     this.current = { speed: 0.18, direction: Math.PI * 0.68 };
     this.configure(profileKey);
     this.reset();
@@ -233,24 +233,34 @@ export class RovDynamics {
 
   reset() {
     this.state.fill(0);
-    this.state[8] = 2;       // Down = 2m depth
-    this.state[11] = 0.35;   // Initial heading psi
+    this.state[8] = 2; // Down = 2m depth
+    const q0 = euler2q(0, 0, 0.35); // Initial heading psi = 0.35 rad
+    this.state[9] = q0[0];
+    this.state[10] = q0[1];
+    this.state[11] = q0[2];
+    this.state[12] = q0[3];
     this.thrusters.fill(0);
     this.thrusterTarget.fill(0);
     this.time = 0;
   }
 
+  getEuler() {
+    return q2euler(this.state.slice(9, 13));
+  }
+
   setPilot({ surge, sway, heave, yaw, roll = 0, pitch = 0 }, assist, targets) {
-    const nu = this.state.slice(0, 6), eta = this.state.slice(6);
+    const nu = this.state.slice(0, 6);
+    const [phi, theta, psi] = this.getEuler();
+    const depth = this.state[8];
     let sx = surge, sy = sway, hz = heave, rz = yaw;
     let rr = roll, pp = pitch;
     if (assist) {
       sx = clamp(1.9 * (surge * 0.9 - nu[0]), -1, 1);
       sy = clamp(2.2 * (sway * 0.65 - nu[1]), -1, 1);
-      hz = heave ? clamp(2.3 * (heave * 0.5 - nu[2]), -1, 1) : clamp(0.34 * (targets.depth - eta[2]) - 1.1 * nu[2], -1, 1);
-      rz = yaw ? clamp(2.0 * (yaw * 0.8 - nu[5]), -1, 1) : clamp(1.5 * wrapPi(targets.heading - eta[5]) - 1.0 * nu[5], -1, 1);
-      rr = clamp(-1.8 * eta[3] - 0.8 * nu[3], -0.65, 0.65);
-      pp = clamp(-1.8 * eta[4] - 0.8 * nu[4], -0.65, 0.65);
+      hz = heave ? clamp(2.3 * (heave * 0.5 - nu[2]), -1, 1) : clamp(0.34 * (targets.depth - depth) - 1.1 * nu[2], -1, 1);
+      rz = yaw ? clamp(2.0 * (yaw * 0.8 - nu[5]), -1, 1) : clamp(1.5 * wrapPi(targets.heading - psi) - 1.0 * nu[5], -1, 1);
+      rr = clamp(-1.8 * phi - 0.8 * nu[3], -0.65, 0.65);
+      pp = clamp(-1.8 * theta - 0.8 * nu[4], -0.65, 0.65);
     }
     this.thrusterTarget = this.allocate([sx, sy, hz, rr, pp, rz]);
   }
@@ -262,16 +272,22 @@ export class RovDynamics {
     // Current shear: calculate local current speed at vehicle depth (state[8])
     const currentSpeed = currentShear(this.state[8], this.current.speed, 18.0);
     this.localCurrentSpeed = currentSpeed;
-    const psi = this.state[11];
-    const v_c = [
-      currentSpeed * Math.cos(this.current.direction - psi),
-      currentSpeed * Math.sin(this.current.direction - psi),
+    const R = Rquat(this.state.slice(9, 13));
+    const vc_n = [
+      currentSpeed * Math.cos(this.current.direction),
+      currentSpeed * Math.sin(this.current.direction),
       0,
     ];
+    // Exact body current using quaternion rotation R^T * v_c^n
+    const vc_b = [
+      R[0][0] * vc_n[0] + R[1][0] * vc_n[1] + R[2][0] * vc_n[2],
+      R[0][1] * vc_n[0] + R[1][1] * vc_n[1] + R[2][1] * vc_n[2],
+      R[0][2] * vc_n[0] + R[1][2] * vc_n[1] + R[2][2] * vc_n[2],
+    ];
     const nu_r = [
-      this.state[0] - v_c[0],
-      this.state[1] - v_c[1],
-      this.state[2] - v_c[2],
+      this.state[0] - vc_b[0],
+      this.state[1] - vc_b[1],
+      this.state[2] - vc_b[2],
       this.state[3],
       this.state[4],
       this.state[5],
@@ -282,11 +298,15 @@ export class RovDynamics {
     // Integrate the pure unconstrained MSS plant via MSS rk4 using depth-sheared current
     this.state = rk4(rovPlant, dt, this.state, tau, this.vehicle, currentSpeed, this.current.direction);
 
-    // Physical seabed and boundary limits applied outside plant as environmental constraints
+    // Normalize unit quaternion on S^3
+    const qNorm = normalizeQuat(this.state.slice(9, 13));
+    this.state[9] = qNorm[0];
+    this.state[10] = qNorm[1];
+    this.state[11] = qNorm[2];
+    this.state[12] = qNorm[3];
+
+    // Physical seabed boundary limits applied outside plant as environmental constraints
     this.state[8] = clamp(this.state[8], 0.15, 17.5); // Seabed is at 18m
-    this.state[10] = clamp(this.state[10], -1.35, 1.35); // Pitch limits for Euler gimbal representation
-    this.state[9] = wrapPi(this.state[9]);
-    this.state[11] = wrapPi(this.state[11]);
     this.time += dt;
   }
 }

@@ -30,13 +30,13 @@ Completed in 1.2:
 - [x] Nonlinear thruster mechanics: deadband cutoff and asymmetric forward/reverse bollard thrust curves (`effectiveThrustRatio`)
 - [x] Propeller advance ratio ($J_a$) and through-water axial inflow degradation (`advanceRatioFactor`)
 - [x] Depth-dependent ocean current shear layer modeling with boundary-layer attenuation (`currentShear`)
-- [x] Propulsion, inflow, shear, and schema unit test suite (`test/propulsion-and-schema.test.js`, 17/17 passing)
-- [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`)
+- [x] Unit quaternion attitude propagation on $S^3$ (`euler2q`, `q2euler`, `Rquat`, `qdot`), eliminating gimbal lock singularities
+- [x] Automated test suite expanded to 20/20 unit tests covering kinematics, quaternions, propulsion, and schema
+- [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`) with four benchmark case studies
 
 Remaining in 1.2:
 - Free-decay and step-response verification tests against reference measurements
 - Parameter import/export UI with real-time JSON validation
-- Quaternion attitude propagation while retaining Euler telemetry
 - Documented calibration workflow against sea-trial or tank-test data
 
 Acceptance criteria:
