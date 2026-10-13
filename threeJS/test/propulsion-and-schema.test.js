@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { effectiveThrustRatio, thrusterWrench, ROV_PROFILES } from '../src/physics.js';
+import { effectiveThrustRatio, advanceRatioFactor, currentShear, thrusterWrench, ROV_PROFILES } from '../src/physics.js';
 import { buildVehicle, rovPlant } from '../src/mss/rovPlant.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,3 +49,68 @@ test('Vehicle JSON profiles load and match runtime vehicle structures', () => {
     assert.ok(vehicle.W > 0);
   }
 });
+
+test('advanceRatioFactor models through-water inflow degradation accurately', () => {
+  const kAdv = 0.30;
+  const vMax = 2.0;
+
+  // 1. Zero inflow or zero command -> 1.0 (bollard pull)
+  assert.equal(advanceRatioFactor(0, 1.0, kAdv, vMax), 1.0);
+  assert.equal(advanceRatioFactor(1.0, 0, kAdv, vMax), 1.0);
+
+  // 2. Forward thrust with forward inflow (Va = 1.0 m/s):
+  // factor = 1 - 0.30 * (1.0 / 2.0) = 0.85 (15% drop)
+  const factorHalf = advanceRatioFactor(1.0, 1.0, kAdv, vMax);
+  assert.ok(Math.abs(factorHalf - 0.85) < 1e-9);
+
+  // 3. Full advance velocity (Va = 2.0 m/s):
+  // factor = 1 - 0.30 * (2.0 / 2.0) = 0.70 (30% drop)
+  const factorFull = advanceRatioFactor(2.0, 1.0, kAdv, vMax);
+  assert.ok(Math.abs(factorFull - 0.70) < 1e-9);
+
+  // 4. Reverse thrust with reverse inflow (-1.0 m/s with u = -1):
+  // alignedInflow = (-1) * (-1.0) = 1.0 -> same 15% drop
+  const factorRev = advanceRatioFactor(-1.0, -1.0, kAdv, vMax);
+  assert.ok(Math.abs(factorRev - 0.85) < 1e-9);
+
+  // 5. Opposing flow (pushing forward while being towed backwards Va = -2.0 m/s):
+  // alignedInflow = 1.0 * (-2.0) = -2.0 -> factor = 1 - 0.30 * (-1.0) = 1.30 -> clamped to 1.15
+  const factorOppose = advanceRatioFactor(-2.0, 1.0, kAdv, vMax);
+  assert.equal(factorOppose, 1.15);
+});
+
+test('currentShear calculates depth-dependent velocity gradient', () => {
+  const surfaceSpeed = 0.50;
+  const seabedDepth = 20.0;
+  const bottomFactor = 0.40;
+
+  // At surface (depth = 0) -> 100% surface speed
+  assert.equal(currentShear(0, surfaceSpeed, seabedDepth, bottomFactor), 0.50);
+
+  // At seabed (depth = 20) -> bottomFactor * surfaceSpeed = 0.40 * 0.50 = 0.20
+  assert.equal(currentShear(20, surfaceSpeed, seabedDepth, bottomFactor), 0.20);
+
+  // At midwater (depth = 10) -> (1.0 - 0.6 * 0.5) * 0.50 = 0.70 * 0.50 = 0.35
+  assert.ok(Math.abs(currentShear(10, surfaceSpeed, seabedDepth, bottomFactor) - 0.35) < 1e-9);
+
+  // Clamped beyond seabed
+  assert.equal(currentShear(25, surfaceSpeed, seabedDepth, bottomFactor), 0.20);
+});
+
+test('thrusterWrench computes static bollard pull without relative velocity and degrades with inflow', () => {
+  const profile = ROV_PROFILES.inspection;
+  const commands = [1, 1, 1, 1, 0, 0, 0, 0]; // 4 horizontal thrusters full forward
+
+  // Static bollard pull (no nu_r)
+  const tauStatic = thrusterWrench(commands, profile);
+
+  // High forward relative surge velocity (u_rel = 1.5 m/s)
+  const nu_r_moving = [1.5, 0, 0, 0, 0, 0];
+  const tauMoving = thrusterWrench(commands, profile, nu_r_moving);
+
+  // Surge force should be positive in both cases, but static > moving
+  assert.ok(tauStatic[0] > 0);
+  assert.ok(tauMoving[0] > 0);
+  assert.ok(tauStatic[0] > tauMoving[0], `Static surge force (${tauStatic[0]}) should exceed forward moving surge force (${tauMoving[0]})`);
+});
+

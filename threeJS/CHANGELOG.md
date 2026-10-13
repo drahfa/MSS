@@ -11,8 +11,10 @@ All notable changes to the browser ROV simulator are documented here. The format
 - Non-linear thruster mechanics in `src/physics.js`:
   - Deadband cutoff (`effectiveThrustRatio`) modeling static friction and ESC deadbands ($u \le 0.04 \implies 0$).
   - Asymmetric bollard pull efficiency ($75\%$ reverse efficiency) modeling ducted propeller reverse thrust loss.
-- Unit test suite `test/propulsion-and-schema.test.js` validating deadband thresholds, linear slope scaling, reverse penalties, and JSON vehicle profile compilation via `buildVehicle`.
-- Comprehensive IEEE Transactions-style technical paper and architectural specification published to `to-publish/IEEE_TECHNICAL_REPORT.md`.
+  - Through-water propeller advance ratio ($J_a$) and axial inflow degradation (`advanceRatioFactor`), reducing available thrust as forward transit velocity increases to enforce realistic terminal speeds.
+- Oceanic boundary layer current shear model (`currentShear`) simulating depth-dependent current speed attenuation ($50\%$ reduction at seabed boundary layer) and dynamically updating the pilot telemetry HUD.
+- Unit test suite expanded in `test/propulsion-and-schema.test.js` validating deadband thresholds, reverse penalties, advance ratio inflow degradation, depth-stratified current shear, and vehicle profile compilation (17/17 tests passing).
+- Comprehensive IEEE Transactions-style technical paper and architectural specification expanded in `to-publish/IEEE_TECHNICAL_REPORT.md` with in-depth derivations of local inflow velocity fields and depth-stratified transport acceleration.
 
 ## [1.1.0] - 2026-10-13
 

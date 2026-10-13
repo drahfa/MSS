@@ -105,16 +105,58 @@ export function effectiveThrustRatio(u, reverseEfficiency = 0.75, deadband = 0.0
   return u > 0 ? activeFraction : -activeFraction * reverseEfficiency;
 }
 
-export function thrusterWrench(commands, profile) {
+/**
+ * Propeller advance ratio degradation factor:
+ * As local axial inflow velocity increases in the direction of commanded thrust,
+ * effective angle of attack drops and thrust reduces compared to static bollard pull.
+ */
+export function advanceRatioFactor(axialVelocity = 0, u = 0, kAdv = 0.30, vMax = 2.0) {
+  if (Math.abs(u) < 1e-4) return 1.0;
+  const alignedInflow = Math.sign(u) * axialVelocity;
+  const factor = 1 - kAdv * (alignedInflow / vMax);
+  return clamp(factor, 0.1, 1.15);
+}
+
+/**
+ * Vertical ocean current shear profile:
+ * Models current velocity reduction with depth due to seabed boundary layer friction.
+ */
+export function currentShear(depth, surfaceSpeed, seabedDepth = 18.0, bottomFactor = 0.5) {
+  const d = clamp(depth, 0, seabedDepth);
+  const shearFactor = 1.0 - (1.0 - bottomFactor) * (d / seabedDepth);
+  return surfaceSpeed * Math.max(0, shearFactor);
+}
+
+export function thrusterWrench(commands, profile, nu_r = null) {
   const tau = [0, 0, 0, 0, 0, 0];
+  const v_b = nu_r ? nu_r.slice(0, 3) : null;
+  const omega = nu_r ? nu_r.slice(3, 6) : null;
+
   profile.thrusters.forEach((thruster, i) => {
-    const ratio = effectiveThrustRatio(
+    let ratio = effectiveThrustRatio(
       commands[i],
       thruster.reverseEfficiency ?? 0.75,
       thruster.deadband ?? 0.04
     );
+
+    const rLever = scale(thruster.r, profile.leverScale);
+
+    if (v_b && omega && ratio !== 0) {
+      // Local flow velocity at thruster: v_local = v_b + omega x r
+      const omegaCrossR = cross(omega, rLever);
+      const vLocal = [v_b[0] + omegaCrossR[0], v_b[1] + omegaCrossR[1], v_b[2] + omegaCrossR[2]];
+      const axialVelocity = vLocal[0] * thruster.f[0] + vLocal[1] * thruster.f[1] + vLocal[2] * thruster.f[2];
+      const advFactor = advanceRatioFactor(
+        axialVelocity,
+        commands[i],
+        thruster.kAdvance ?? 0.30,
+        thruster.vMax ?? 2.0
+      );
+      ratio *= advFactor;
+    }
+
     const force = scale(thruster.f, ratio * thruster.force);
-    const moment = cross(scale(thruster.r, profile.leverScale), force);
+    const moment = cross(rLever, force);
     for (let j = 0; j < 3; j++) {
       tau[j] += force[j];
       tau[j + 3] += moment[j];
@@ -216,10 +258,29 @@ export class RovDynamics {
   step(dt) {
     const actuatorAlpha = 1 - Math.exp(-dt / this.profile.actuatorTau);
     this.thrusters = this.thrusters.map((v, i) => v + (this.thrusterTarget[i] - v) * actuatorAlpha);
-    const tau = thrusterWrench(this.thrusters, this.profile);
 
-    // Integrate the pure unconstrained MSS plant via MSS rk4
-    this.state = rk4(rovPlant, dt, this.state, tau, this.vehicle, this.current.speed, this.current.direction);
+    // Current shear: calculate local current speed at vehicle depth (state[8])
+    const currentSpeed = currentShear(this.state[8], this.current.speed, 18.0);
+    this.localCurrentSpeed = currentSpeed;
+    const psi = this.state[11];
+    const v_c = [
+      currentSpeed * Math.cos(this.current.direction - psi),
+      currentSpeed * Math.sin(this.current.direction - psi),
+      0,
+    ];
+    const nu_r = [
+      this.state[0] - v_c[0],
+      this.state[1] - v_c[1],
+      this.state[2] - v_c[2],
+      this.state[3],
+      this.state[4],
+      this.state[5],
+    ];
+
+    const tau = thrusterWrench(this.thrusters, this.profile, nu_r);
+
+    // Integrate the pure unconstrained MSS plant via MSS rk4 using depth-sheared current
+    this.state = rk4(rovPlant, dt, this.state, tau, this.vehicle, currentSpeed, this.current.direction);
 
     // Physical seabed and boundary limits applied outside plant as environmental constraints
     this.state[8] = clamp(this.state[8], 0.15, 17.5); // Seabed is at 18m

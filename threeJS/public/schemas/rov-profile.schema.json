@@ -154,6 +154,19 @@
             "maximum": 0.3,
             "default": 0.04,
             "description": "Normalized command deadband threshold [-deadband, deadband] within which output thrust is zero."
+          },
+          "kAdvance": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.30,
+            "description": "Through-water advance ratio thrust degradation coefficient (default 0.30, representing 30% thrust drop at vMax)."
+          },
+          "vMax": {
+            "type": "number",
+            "minimum": 0.1,
+            "default": 2.0,
+            "description": "Reference velocity in m/s for maximum advance degradation (default 2.0 m/s)."
           }
         }
       }

@@ -28,14 +28,14 @@ Goal: move from representative motion toward calibratable vehicle behavior.
 Completed in 1.2:
 - [x] External Vehicle Parameter Schema (`public/schemas/rov-profile.schema.json`) and standalone JSON profiles (`public/vehicles/*.json`)
 - [x] Nonlinear thruster mechanics: deadband cutoff and asymmetric forward/reverse bollard thrust curves (`effectiveThrustRatio`)
-- [x] Propulsion and JSON schema unit test suite (`test/propulsion-and-schema.test.js`)
+- [x] Propeller advance ratio ($J_a$) and through-water axial inflow degradation (`advanceRatioFactor`)
+- [x] Depth-dependent ocean current shear layer modeling with boundary-layer attenuation (`currentShear`)
+- [x] Propulsion, inflow, shear, and schema unit test suite (`test/propulsion-and-schema.test.js`, 17/17 passing)
 - [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`)
 
 Remaining in 1.2:
-- Propeller advance ratio $J_a$, local inflow, wake interaction, and cavitation limits
 - Free-decay and step-response verification tests against reference measurements
 - Parameter import/export UI with real-time JSON validation
-- Vertical and horizontal current shear rather than a single planar current vector
 - Quaternion attitude propagation while retaining Euler telemetry
 - Documented calibration workflow against sea-trial or tank-test data
 

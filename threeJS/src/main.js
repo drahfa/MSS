@@ -347,7 +347,7 @@ function updateUI(dt) {
   $('depthBar').style.width=`${clamp(d/30*100,1,100)}%`; $('roll').textContent=`${degrees(phi).toFixed(1)}°`; $('pitch').textContent=`${degrees(theta).toFixed(1)}°`;
   $('heading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingReadout').textContent=`HDG ${String(Math.round(hdg)).padStart(3,'0')}°`;
   $('compassHeading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingDial').style.setProperty('--heading',`${-hdg}deg`);
-  $('speed').textContent=`${Math.hypot(u,v,w).toFixed(2)} m/s`; $('surge').textContent=`${u.toFixed(2)} m/s`; $('sway').textContent=`${v.toFixed(2)} m/s`; $('heave').textContent=`${w.toFixed(2)} m/s`; $('altitude').textContent=`${Math.max(0,18-d).toFixed(2)} m`; $('currentValue').textContent=`${sim.current.speed.toFixed(2)} m/s`;
+  $('speed').textContent=`${Math.hypot(u,v,w).toFixed(2)} m/s`; $('surge').textContent=`${u.toFixed(2)} m/s`; $('sway').textContent=`${v.toFixed(2)} m/s`; $('heave').textContent=`${w.toFixed(2)} m/s`; $('altitude').textContent=`${Math.max(0,18-d).toFixed(2)} m`; $('currentValue').textContent=`${(sim.localCurrentSpeed ?? sim.current.speed).toFixed(2)} m/s`;
   $('attitudeDial').style.setProperty('--roll',`${-degrees(phi)}deg`); $('attitudeDial').style.setProperty('--pitch',`${clamp(degrees(theta)*.8,-24,24)}px`);
   const minutes=Math.floor(sim.time/60),seconds=(sim.time%60).toFixed(1).padStart(4,'0'); $('elapsed').textContent=`${String(minutes).padStart(2,'0')}:${seconds}`;
   let load=0; sim.thrusters.forEach((x,i)=>{ $('thruster'+(i+1)).style.setProperty('--load',`${Math.abs(x)*100}%`); $('thruster'+(i+1)).classList.toggle('reverse',x<0); load+=x*x; });
