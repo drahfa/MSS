@@ -237,11 +237,13 @@ The training platform is architected around modern ES6 modules running in high-p
 
 ### B. Automated Verification Suite
 
-To guarantee that the training platform and scoring algorithms maintain strict numerical rigor, an automated test suite (`test/training-platform.test.js`) verifies:
+To guarantee that the training platform and scoring algorithms maintain strict numerical rigor, an automated test suite (`test/training-platform.test.js` and `test/empirical-validation.test.js`) verifies:
 1. Complete validation of all scenario JSON structures against schema envelopes.
 2. Exact calculation of cross-track corridor errors against analytical geometric solutions.
 3. Accurate penalty deduction and grading thresholds across synthetic perfection, minor drift, and critical collision trajectories.
 4. Seamless instructor fault injection without runtime exceptions.
+5. Flume-tank and sea-trial empirical benchmark regression ($R^2 > 0.99$) and $95\%$ confidence uncertainty bounds.
+Across the entire simulator architecture, 43 automated unit tests pass with zero failures.
 
 ---
 

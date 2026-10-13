@@ -42,7 +42,7 @@ Acceptance criteria (All Passed):
 - Thruster and free-decay test cases can be compared against reference measurements (Validated via `test/hydrodynamics.test.js`, Table V)
 - Energy and sign-convention checks are automated (Validated via Lyapunov passivity tests)
 
-## 1.3 — Mission operations
+## 1.3 — Mission operations (Complete)
 
 Goal: support repeatable piloting and mission-analysis workflows.
 
@@ -61,7 +61,7 @@ Acceptance criteria (All Passed):
 - A mission can be authored, run, exported, and replayed with the same initial conditions (Validated via `test/mission-operations.test.js` & cockpit CSV export)
 - Failure states are visible in both the allocator and operator console (Validated via `test/mission-operations.test.js` & HUD fault indicators)
 
-## 2.0 — Validated training platform
+## 2.0 — Validated training platform (Complete)
 
 Goal: establish a versioned, evidence-backed configuration suitable for structured training and engineering studies.
 Documented in dedicated IEEE Report: `to-publish/IEEE_TRAINING_PLATFORM_REPORT.md`.
@@ -77,6 +77,16 @@ Completed in 2.0:
 - [x] WCAG 2.1 AA accessibility (ARIA live regions for alarms) and internationalization dictionary (`src/i18n.js` with English and Norwegian Bokmål support)
 
 This milestone must not be described as safety-critical or hardware-certified without an appropriate independent validation process.
+
+## 2.1 — Advanced Intervention & Robotics (Future Horizon)
+
+Goal: expand from observation/survey piloting into active subsea intervention and hardware-in-the-loop interoperability.
+
+- Multi-node lumped-mass umbilical cable dynamics ($N$-node finite segment cable with bending stiffness and benthic drape)
+- Ultra-Short Baseline (USBL) acoustic positioning and Extended Kalman Filter (EKF) sensor fusion
+- Subsea robotic manipulator arm kinematics (1-DOF grabber to 4-DOF articulated arm) with body reaction wrench coupling
+- Real-time WebRTC / WebSocket telemetry bridge for MAVLink / ROS 2 interoperability
+- Multi-pilot cooperative intervention (dual-ROV tandem tether handling)
 
 ## Maintenance backlog
 
