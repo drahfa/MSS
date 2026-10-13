@@ -138,9 +138,7 @@ Blender authors models Z-up and exports glTF Y-up. Propeller blades are authored
 
 ## Assets
 
-The underwater habitat is a Polyfork asset stored locally as `src/assets/underwater-research-habitat.mjs`, allowing Vite to resolve its Three.js imports and produce a self-contained build.
-
-`src/assets/one-person-submarine.mjs` is a retained legacy Polyfork asset and is not loaded by the current simulator. Active vehicle visuals come from `public/models/rov-*.glb`.
+The underwater habitat is a Polyfork asset stored locally as `src/assets/underwater-research-habitat.mjs`, allowing Vite to resolve its Three.js imports and produce a self-contained build. Active vehicle visuals come from `public/models/rov-*.glb`.
 
 ## Project structure
 

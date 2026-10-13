@@ -38,6 +38,9 @@
         <div class="viewport-tools">
           <button id="profileButton" type="button" aria-label="Profile parameter import/export">Profile JSON</button>
           <button id="scenarioBtn" type="button">Scenario: Free</button>
+          <button id="instructorBtn" type="button">Instructor</button>
+          <button id="debriefBtn" type="button">Debrief</button>
+          <button id="langBtn" type="button" aria-label="Toggle language">NO/EN</button>
           <button id="recordButton" type="button" aria-pressed="false">Rec Telemetry</button>
           <button id="faultButton" type="button">Fault: None</button>
           <button id="demoButton" type="button" aria-pressed="false">Demo <kbd>~</kbd></button>
@@ -77,8 +80,8 @@
             <div id="stationIndicator" class="active"><i></i><span>Station keep</span></div>
             <div id="headingIndicator" class="active"><i></i><span>Auto heading</span></div>
             <div id="depthIndicator" class="active"><i></i><span>Auto depth</span></div>
-            <div id="tetherIndicator" class="active"><i></i><span>Tether OK</span></div>
-            <div id="gamepadIndicator"><i></i><span>Gamepad</span></div>
+            <div id="tetherIndicator" class="active" aria-live="assertive"><i></i><span>Tether OK</span></div>
+            <div id="gamepadIndicator" aria-live="polite"><i></i><span>Gamepad</span></div>
           </div>
         </section>
 
@@ -178,6 +181,71 @@
           <footer class="modal-footer">
             <button id="applyProfileBtn" type="button" class="primary-button" disabled>Apply to Simulator</button>
             <button id="cancelProfileBtn" type="button" class="text-button">Cancel</button>
+          </footer>
+        </div>
+      </dialog>
+
+      <!-- Instructor Station Supervision Modal -->
+      <dialog id="instructorModal" class="profile-modal">
+        <div class="modal-shell">
+          <header class="modal-header">
+            <div>
+              <h2>Instructor Station &amp; Fault Injection</h2>
+              <p>Simulate environmental hazards and silent hardware failures in real time</p>
+            </div>
+            <button id="closeInstructorModal" type="button" class="close-btn" aria-label="Close dialog">&times;</button>
+          </header>
+          <div class="modal-body" style="grid-template-columns: 1fr 1fr;">
+            <div class="editor-pane">
+              <h3>Environmental Disturbances</h3>
+              <div style="margin: 10px 0;">
+                <label for="turbiditySlider">Optical Turbidity (Silt Plume Fog):</label>
+                <input id="turbiditySlider" type="range" min="0.035" max="0.20" step="0.005" value="0.035" style="margin-top: 6px;" />
+                <small id="turbidityValue" style="color:var(--muted); display:block; margin-top:4px;">0.035 m⁻¹ (Clear Water)</small>
+              </div>
+              <div style="margin: 14px 0;">
+                <button id="gustBtn" type="button" class="tool-btn" style="width:100%; padding:8px;">Inject Current Gust (+0.3 m/s)</button>
+              </div>
+            </div>
+            <div class="diagnostic-pane">
+              <h3>Hardware Failure Injection</h3>
+              <p style="font-size:10px; color:var(--muted); margin:0 0 10px;">Trigger silent thruster degradation without pilot notification:</p>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button id="failT1Degraded" type="button" class="tool-btn">Thruster 1: Degrade 50%</button>
+                <button id="failT1Offline" type="button" class="tool-btn">Thruster 1: Cut Offline (0%)</button>
+                <button id="failT1Stuck" type="button" class="tool-btn">Thruster 1: Jam Stuck 100%</button>
+                <button id="clearAllFaultsBtn" type="button" class="tool-btn" style="border-color:var(--cyan); color:var(--cyan); margin-top:8px;">Clear All Injected Faults</button>
+              </div>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button id="doneInstructorBtn" type="button" class="primary-button">Close Station</button>
+          </footer>
+        </div>
+      </dialog>
+
+      <!-- Flight Debriefing Report Modal -->
+      <dialog id="debriefModal" class="profile-modal" style="max-width: 860px;">
+        <div class="modal-shell">
+          <header class="modal-header">
+            <div>
+              <h2>Flight Debriefing Report &amp; Certification</h2>
+              <p>Objective evaluation results compliant with IMCA/ISO pilot proficiency standards</p>
+            </div>
+            <button id="closeDebriefModal" type="button" class="close-btn" aria-label="Close dialog">&times;</button>
+          </header>
+          <div class="modal-toolbar">
+            <button id="downloadDebriefMdBtn" type="button" class="tool-btn">Download Report (.MD)</button>
+            <button id="downloadDebriefJsonBtn" type="button" class="tool-btn">Export Metrics (.JSON)</button>
+          </div>
+          <div class="modal-body" style="grid-template-columns: 1fr;">
+            <div class="editor-pane">
+              <label for="debriefReportText">Debriefing Summary &amp; Infraction Timeline:</label>
+              <textarea id="debriefReportText" readonly style="font-family: monospace; font-size: 11px; height: 320px;"></textarea>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button id="doneDebriefBtn" type="button" class="primary-button">Close Debrief</button>
           </footer>
         </div>
       </dialog>

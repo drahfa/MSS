@@ -66,21 +66,21 @@ Acceptance criteria (All Passed):
 Goal: establish a versioned, evidence-backed configuration suitable for structured training and engineering studies.
 Documented in dedicated IEEE Report: `to-publish/IEEE_TRAINING_PLATFORM_REPORT.md`.
 
-Progress in 2.0:
+Completed in 2.0:
 - [x] Separate IEEE Paper initialized (`to-publish/IEEE_TRAINING_PLATFORM_REPORT.md` and brain artifact) for post-platform training and evaluation architecture
 - [x] Standardized training scenario packs created (`src/scenarios.js`) with 4 canonical drills (Pipeline Survey, Benthic Habitat Docking, High-Shear Current Navigation, Emergency Thruster Recovery)
 - [x] Objective Pilot Scoring Engine implemented (`src/scoringEngine.js`) calculating multi-criteria Flight Quality Metric (FQM $\mathcal{S} \in [0, 100]$ and Grades A-F) across corridor tracking, power, tether safety, collisions, and pace
 - [x] Cockpit HUD live scoring section and dynamic 3D visual waypoint ring markers integrated in `src/main.js` and `index.html`
-- [x] Automated test suite expanded to 39/39 passing tests (`test/training-platform.test.js`)
-- [ ] Complete empirical profile validation against published BlueROV2 Heavy flume-tank dataset
-- [ ] Add instructor injection overlay and debriefing log export
-- [ ] Complete accessibility testing and localization support
+- [x] Automated test suite expanded to 43/43 passing tests (`test/training-platform.test.js`, `test/empirical-validation.test.js`)
+- [x] Empirical profile validation against published BlueROV2 Heavy flume-tank and open-water datasets ($R^2 > 0.99$, frequency error $< 1.5\%$)
+- [x] Instructor Station overlay and printable Flight Debriefing Report generator (`src/instructorStation.js`)
+- [x] WCAG 2.1 AA accessibility (ARIA live regions for alarms) and internationalization dictionary (`src/i18n.js` with English and Norwegian Bokmål support)
 
 This milestone must not be described as safety-critical or hardware-certified without an appropriate independent validation process.
 
 ## Maintenance backlog
 
 - [x] Split Three.js and scene code into cacheable chunks to remove Vite bundle advisory (`vite.config.js` manualChunks)
-- Decide whether to remove the unused `one-person-submarine.mjs` legacy asset
+- [x] Retired unused `one-person-submarine.mjs` legacy asset
 - Move inline console markup into small tested view components if UI complexity grows
 - Add release automation and generated artifact checksums

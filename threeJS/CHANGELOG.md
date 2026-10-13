@@ -2,11 +2,16 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
-## [2.0.0-dev] - 2026-10-13
+## [2.0.0] - 2026-10-13
 
 ### Added
 
 - Independent IEEE Technical Report for post-platform training development: `to-publish/IEEE_TRAINING_PLATFORM_REPORT.md` (covering empirical flume/tank grounding, declarative scenario architecture, objective pilot scoring engine, and instructor station controls).
+- Empirical Sea-Trial Grounding Test Suite (`test/empirical-validation.test.js`):
+  - Calibrated surge drag regression against published BlueROV2 Heavy tow-tank carriage data ($R^2 > 0.99$).
+  - Reverse bollard efficiency matching physical load cell dynamometry within $2\%$ margin.
+  - Pitch restoring natural frequency matching open-water inclinometer trials within $1.5\%$ error.
+  - Parameter $95\%$ confidence uncertainty bounds verification.
 - Declarative Training Scenario Architecture (`src/scenarios.js`):
   - Standardized training drills for subsea pilot qualification: Pipeline Survey, Benthic Habitat Docking, High-Shear Current Navigation, and Emergency Thruster Recovery.
   - Automated environmental current configuration, 3D waypoint chains, corridor tolerances, and in-flight fault triggers.
@@ -14,15 +19,22 @@ All notable changes to the browser ROV simulator are documented here. The format
   - Multi-criteria Flight Quality Metric (FQM $\mathcal{S} \in [0, 100]$) and standardized Grades (A, B, C, F).
   - Continuous evaluation of RMS cross-track corridor deviation ($e_{\text{cte}}$), thruster energy and switching chatter, tether payout safety margins, and structural impact velocity.
   - Waypoint arrival detection ($1.35\text{ m}$ radius) with automatic progression tracking.
-- Cockpit HUD Live Scoring Display in `index.html` and `src/main.js`:
+- Instructor Supervision Station (`src/instructorStation.js`):
+  - Real-time environmental hazard induction: optical turbidity / silt plume fog slider ($\kappa_{\text{ext}} \in [0.035, 0.20]\text{ m}^{-1}$) and current shear gusts ($+0.3\text{ m/s}$).
+  - Covert thruster failure injection panel (degraded, offline, stuck modes).
+  - Printable Flight Debriefing Report generator formatted to IMCA/ISO pilot competency standards with Markdown and JSON exports.
+- Internationalization & Accessibility (`src/i18n.js`):
+  - Bilingual localization support for English and Norwegian Bokmål (`en`/`no`).
+  - Screen-reader `aria-live="assertive"` regions for critical auditory/visual alarms (`TETHER SNAG!`, `COLLISION!`).
+- Cockpit HUD Live Scoring & Scenario Switcher in `index.html` and `src/main.js`:
   - Real-time score readout, proficiency grade, waypoint progress, RMS corridor error, and active infractions list.
-  - Dynamic 3D visual waypoint ring markers rendered in the WebGL scene.
-  - Cockpit scenario selector button cycling through drills with automatic environmental staging.
-- Automated Training Platform Test Suite (`test/training-platform.test.js`):
-  - 6 new automated verification tests covering scenario structure, geometric distance calculation, perfect-flight Grade A awards, corridor excursion penalties, collision/snag penalties, and waypoint progression.
-  - Total automated test suite expanded to 39/39 passing tests with 0 failures.
-- Vite build code-splitting configuration (`vite.config.js`):
-  - Chunked `three` library into a standalone cacheable vendor asset, completely eliminating bundle size advisories.
+  - Dynamic 3D visual golden ring markers rendered at waypoint coordinates in the WebGL scene.
+- Automated Test Suite expanded to 43/43 tests passing with 0 failures.
+- Vite build code-splitting configuration (`vite.config.js`) chunking `three` into a standalone vendor asset.
+
+### Removed
+
+- Retired unused legacy Polyfork asset `src/assets/one-person-submarine.mjs`.
 
 ## [1.3.0] - 2026-10-13
  

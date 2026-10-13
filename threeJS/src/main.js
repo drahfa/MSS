@@ -8,6 +8,8 @@ import { GamepadController } from './gamepad.js';
 import { TelemetryRecorder } from './telemetryRecorder.js';
 import { TRAINING_SCENARIOS } from './scenarios.js';
 import { ScoringEngine } from './scoringEngine.js';
+import { InstructorStation } from './instructorStation.js';
+import { getLanguage, setLanguage, t } from './i18n.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -483,6 +485,74 @@ $('exportProfileBtn').addEventListener('click', exportProfile);
 $('importProfileFile').addEventListener('change', importProfileFile);
 $('reloadProfilePresetBtn').addEventListener('click', reloadProfilePreset);
 $('applyProfileBtn').addEventListener('click', applyProfileToSimulator);
+
+// Instructor Station & Flight Debriefing Setup
+const instructor = new InstructorStation(sim, scene);
+const instructorModal = $('instructorModal');
+const debriefModal = $('debriefModal');
+
+$('instructorBtn')?.addEventListener('click', () => instructorModal?.showModal());
+$('closeInstructorModal')?.addEventListener('click', () => instructorModal?.close());
+$('doneInstructorBtn')?.addEventListener('click', () => instructorModal?.close());
+
+$('turbiditySlider')?.addEventListener('input', e => {
+  const val = Number(e.target.value);
+  instructor.setTurbidity(val);
+  $('turbidityValue').textContent = `${val.toFixed(3)} m⁻¹ (${val > 0.1 ? 'Turbid Silt Plume' : 'Clear Water'})`;
+});
+
+$('gustBtn')?.addEventListener('click', () => {
+  instructor.injectCurrentGust(sim.current.speed + 0.3);
+  $('currentOutput').textContent = `${sim.current.speed.toFixed(2)} m/s`;
+  $('current').value = sim.current.speed;
+});
+
+$('failT1Degraded')?.addEventListener('click', () => instructor.injectThrusterFault(0, 'DEGRADED', 0.5));
+$('failT1Offline')?.addEventListener('click', () => instructor.injectThrusterFault(0, 'OFFLINE', 0.0));
+$('failT1Stuck')?.addEventListener('click', () => instructor.injectThrusterFault(0, 'STUCK', 1.0));
+$('clearAllFaultsBtn')?.addEventListener('click', () => instructor.clearFaults());
+
+function openDebrief() {
+  const sc = TRAINING_SCENARIOS[scenarioKeys[currentScenarioIdx]] || { title: 'Free Flight Training', level: 'General', timeBudget: 60 };
+  const scoreData = scoringEngine.computeScore();
+  const report = instructor.generateDebriefingReport(sc, scoreData, 'ROV Pilot');
+  $('debriefReportText').value = report;
+  debriefModal?.showModal();
+}
+
+$('debriefBtn')?.addEventListener('click', openDebrief);
+$('closeDebriefModal')?.addEventListener('click', () => debriefModal?.close());
+$('doneDebriefBtn')?.addEventListener('click', () => debriefModal?.close());
+
+$('downloadDebriefMdBtn')?.addEventListener('click', () => {
+  const text = $('debriefReportText').value;
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `flight-debrief-${Math.round(sim.time)}s.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$('downloadDebriefJsonBtn')?.addEventListener('click', () => {
+  const scoreData = scoringEngine.computeScore();
+  const blob = new Blob([JSON.stringify(scoreData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `flight-metrics-${Math.round(sim.time)}s.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Localization Toggle
+$('langBtn')?.addEventListener('click', () => {
+  const nextLang = getLanguage() === 'en' ? 'no' : 'en';
+  setLanguage(nextLang);
+  $('langBtn').textContent = nextLang === 'en' ? 'NO/EN' : 'EN/NO';
+  $('statusText').textContent = t(running ? 'resume' : 'pause');
+});
 
 function resize() { const {clientWidth:w,clientHeight:h}=sceneHost; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(sceneHost);
