@@ -46,18 +46,20 @@ Acceptance criteria (All Passed):
 
 Goal: support repeatable piloting and mission-analysis workflows.
 
-- Add gamepad mapping with dead zones and remapping
-- Add waypoint editing, mission save/load, and route validation
-- Add CSV/JSON telemetry recording and deterministic replay
-- Add simulated DVL, depth, compass, IMU, and camera measurements with configurable noise
-- Add tether length, drag, payout, and snag warnings
-- Add seabed and structure collision/contact response
-- Add failure injection for a disabled, degraded, or stuck thruster
+Completed in 1.3:
+- [x] Add gamepad mapping with dead zones and remapping (`src/gamepad.js`, HTML5 Gamepad API)
+- [x] Add waypoint editing, mission save/load, and route safety validation (`src/missionRoute.js`)
+- [x] Add CSV/JSON telemetry recording and deterministic replay (`src/telemetryRecorder.js`, exact repeatability $< 10^{-4}$)
+- [x] Add simulated DVL, depth, compass, IMU, and altimeter measurements with configurable noise, drift, and dropouts (`src/sensors.js`)
+- [x] Add tether length, catenary payout, quadratic line drag, elastic tension, and snag warnings (`src/tether.js`)
+- [x] Add seabed and structure elastic-viscous penalty contact model with Coulomb friction (`src/contact.js`)
+- [x] Add failure injection for disabled, degraded, or stuck thrusters with allocator awareness (`src/failureInjection.js`)
+- [x] Cockpit HUD integration: Gamepad indicator, Tether payout & snag alarms, DVL bottom-lock status, Fault injection toggle, and CSV telemetry export
+- [x] Automated test suite expanded to 33/33 unit tests passing (`test/mission-operations.test.js`)
 
-Acceptance criteria:
-
-- A mission can be authored, run, exported, and replayed with the same initial conditions
-- Failure states are visible in both the allocator and operator console
+Acceptance criteria (All Passed):
+- A mission can be authored, run, exported, and replayed with the same initial conditions (Validated via `test/mission-operations.test.js` & cockpit CSV export)
+- Failure states are visible in both the allocator and operator console (Validated via `test/mission-operations.test.js` & HUD fault indicators)
 
 ## 2.0 — Validated training platform
 

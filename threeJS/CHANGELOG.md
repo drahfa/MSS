@@ -2,6 +2,45 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
+## [1.3.0] - 2026-10-13
+ 
+### Added
+ 
+- Hardware Gamepad API pilot controller (`src/gamepad.js`):
+  - Standard gamepad axis mapping (sway, surge, yaw, heave triggers) with configurable dead zones ($0.08$) and linear normalization.
+  - Seamless auto-detection and fallback between keyboard and analog joystick control.
+- Mission Route planning and safety validation system (`src/missionRoute.js`):
+  - 3D waypoint creation, editing, and route traversal with proximity arrival detection.
+  - Operational flight envelope safety validation checking surface limits and seabed clearance thresholds.
+  - JSON serialization and deserialization for mission profile persistence.
+- Telemetry logging, CSV/JSON export, and deterministic flight replay (`src/telemetryRecorder.js`):
+  - Step-by-step state ($13$ states), pilot inputs, actuator allocations, and assist flags logging.
+  - One-click CSV and JSON telemetry export from cockpit HUD.
+  - Bit-exact deterministic flight replay from identical initial conditions with state divergence $< 10^{-4}$.
+- Synthetic subsea instrument suite (`src/sensors.js`):
+  - Doppler Velocity Log (DVL) bottom-track with altitude-dependent bottom-lock dropout ($< 0.3\text{ m}$ or $> 25\text{ m}$) and Gaussian measurement noise.
+  - Hydrostatic pressure depth transducer converting hydrostatic head $p = \rho g d$ to bars with sensor bias drift.
+  - Fluxgate magnetic compass including local geomagnetic declination and heading noise.
+  - 6-axis Inertial Measurement Unit (IMU): angular rate gyros with random-walk bias drift and 3-axis accelerometer specific force $\mathbf{f}^b = \mathbf{a}^b - \mathbf{R}^T \mathbf{g}^n$.
+  - Acoustic altimeter measuring direct vertical seabed clearance.
+- Umbilical tether dynamics model (`src/tether.js`):
+  - 3D catenary payout length calculation based on excursion distance from surface clump weight.
+  - Cross-flow quadratic hydrodynamic line drag opposing ROV body motion.
+  - Elastic restoring spring tension with advisory threshold ($88\%$ payout) and hard snag alerts ($> 100\%$ spool capacity).
+- Benthic penalty contact and friction model (`src/contact.js`):
+  - Elastic-viscous penalty spring-damper contact reactions ($k_c = 18{,}000\text{ N/m}$, $c_c = 1{,}500\text{ N}\cdot\text{s/m}$) for both horizontal seabed plane ($z = 18\text{ m}$) and cylindrical/spherical underwater habitat obstacles ($r = 3.5\text{ m}$).
+  - Tangential Coulomb friction opposing sliding velocity.
+- Thruster failure injection framework (`src/failureInjection.js`):
+  - Real-time simulation of `OK`, `OFFLINE`, `DEGRADED`, and `STUCK` fault modes per channel.
+  - Real-time allocator health weighting informing fault-tolerant allocation matrices.
+  - Cockpit HUD fault injector button cycling faults dynamically during flight.
+- Cockpit HUD enhancements in `index.html` and `src/main.js`:
+  - Annunciator lights for Gamepad connection, Tether payout & snag warnings, and DVL bottom-lock status.
+  - Telemetry record/export button generating timestamped CSV logs directly in the browser.
+- Automated mission operations test suite in `test/mission-operations.test.js`:
+  - 6 new automated verification tests covering deterministic replay, synthetic sensors, tether payout/snag, penalty contact dynamics, thruster failure injection, and mission route envelope validation.
+  - Total test suite expanded to 33/33 tests passing with 0 failures.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added

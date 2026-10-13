@@ -595,27 +595,81 @@ For demonstration and autonomous benchmarking, an automated route director guide
 5. *Return Arc*: Ascending spiral transit clear of structural moorings ($d = 6\text{ m}$).
 6. *Station Keeping*: Static hovering in the home staging envelope ($d = 3\text{ m}$).
 
+### D. Subsea Instrument Suite & Stochastic Noise Models
+
+To replicate subsea navigation avionics in the browser without real hardware sensors, synthetic instrument models emulate physical measurement characteristics:
+1. **Doppler Velocity Log (DVL)**: Emulates high-frequency acoustic beam reflections measuring 3D ground velocity $\mathbf{v}^b = [u, v, w]^T$. Bottom-lock availability depends strictly on vehicle altitude $h$:
+   $$\text{Lock}(h) = \begin{cases} \text{true}, & 0.3\text{ m} \le h \le 25.0\text{ m} \\ \text{false}, & \text{otherwise} \end{cases}$$
+   When locked, measurements include zero-mean Gaussian acoustic noise $\mathbf{w}_{\text{dvl}} \sim \mathcal{N}(\mathbf{0}, \sigma_{\text{dvl}}^2 \mathbf{I})$ with $\sigma_{\text{dvl}} = 0.005\text{ m/s}$. When bottom-lock drops out (e.g. at the surface or extreme depths), measured ground velocity drops to zero with a lost-lock alert flag.
+2. **Hydrostatic Depth Transducer**: Translates vertical position $d = z$ into barometric water pressure head:
+   $$p = p_{\text{atm}} + \rho g d \cdot 10^{-5}\text{ bar}$$
+   including slow thermal sensor zero-bias drift and precision quantization noise ($\sigma_d = 0.015\text{ m}$).
+3. **Fluxgate Compass**: Measures magnetic heading $\psi_m = \psi + \delta_{\text{mag}} + w_{\psi}$, where $\delta_{\text{mag}}$ represents local geomagnetic declination ($-0.035\text{ rad}$) and $w_{\psi} \sim \mathcal{N}(0, 0.008^2)$.
+4. **6-Axis Inertial Measurement Unit (IMU)**:
+   - **Triaxial Gyroscopes**: Measure body angular rates $\boldsymbol{\omega}_{ib}^b = [p, q, r]^T + \mathbf{b}_g(t) + \mathbf{w}_g$, where $\mathbf{b}_g$ models Brownian random-walk sensor bias drift ($\dot{\mathbf{b}}_g \sim \mathcal{N}(\mathbf{0}, \mathbf{Q}_g)$).
+   - **Triaxial Accelerometers**: Measure physical specific force $\mathbf{f}^b$, which couples dynamic vehicle acceleration with the projected gravity vector:
+     $$\mathbf{f}^b = \dot{\boldsymbol{\nu}}_1 + \mathbf{S}(\boldsymbol{\omega})\boldsymbol{\nu}_1 - \mathbf{R}^T \mathbf{g}^n$$
+     At static equilibrium ($\dot{\boldsymbol{\nu}} = \mathbf{0}, \boldsymbol{\nu} = \mathbf{0}$), the accelerometer reads an upward specific force $-\mathbf{R}^T \mathbf{g}^n$ of $+9.81\text{ m/s}^2$ opposing gravity, matching physical strapdown accelerometers.
+
+### E. Umbilical Tether Dynamics & Snag Alert System
+
+The physical umbilical cable linking the ROV to the surface vessel or tether management system (TMS) exerts significant hydrodynamic drag and structural tension. Our lightweight catenary model calculates:
+1. **3D Catenary Payout Length**: Given surface clump position $\mathbf{p}_{\text{tms}}$ and ROV position $\mathbf{p}_{\text{rov}}$, straight-line displacement $s = \|\mathbf{p}_{\text{rov}} - \mathbf{p}_{\text{tms}}\|_2$ defines payout with a catenary sag factor:
+   $$L_{\text{payout}} = s \cdot (1 + \kappa_{\text{sag}} \cdot (d / s)^2)$$
+2. **Hydrodynamic Line Drag**: Approximates cross-flow quadratic water resistance acting on the submerged cable opposing vehicle body velocity:
+   $$\mathbf{F}_{\text{drag}}^b = -\frac{1}{2} \rho C_{d, \text{tether}} d_{\text{tether}} L_{\text{payout}} \|\boldsymbol{\nu}_1\| \boldsymbol{\nu}_1$$
+3. **Elastic Restoring Tension & Snag Alerts**: If excursion approaches maximum spool capacity $L_{\max}$:
+   - Advisory warning triggers at $88\%$ spool deployment ($L_{\text{payout}} \ge 0.88 L_{\max}$).
+   - Beyond $100\%$ capacity ($L_{\text{payout}} > L_{\max}$), an elastic restoring tension $F_T = k_T (L_{\text{payout}} - L_{\max})$ pulls the ROV back toward the clump weight, and a critical `SNAG ALERT` annunciator illuminates on the operator HUD.
+
+### F. Benthic Penalty Contact & Coulomb Friction
+
+To prevent unphysical terrain penetration while maintaining numerical continuity in the RK4 solver, boundary interactions with the seabed ($z_{\text{bed}} = 18.0\text{ m}$) and cylindrical/spherical subsea structures ($r_h = 3.5\text{ m}$) employ an elastic-viscous penalty formulation:
+1. **Normal Restoring Reaction**: When penetration $\delta_n = z - z_{\text{bed}} > 0$:
+   $$F_n = \max(0, k_c \delta_n + c_c \dot{\delta}_n)$$
+   where $k_c = 18{,}000\text{ N/m}$ and $c_c = 1{,}500\text{ N}\cdot\text{s/m}$.
+2. **Tangential Coulomb Friction**: Opposes sliding tangential body velocity:
+   $$\mathbf{F}_t = -\mu_c F_n \frac{\mathbf{v}_t}{\|\mathbf{v}_t\| + \epsilon}$$
+   with coefficient $\mu_c = 0.45$. This allows vehicles to settle smoothly onto the seafloor, rest stably under negative buoyancy, and scrape realistically against obstacles without solver instability.
+
+### G. Thruster Failure Injection Framework
+
+Flight simulators must train pilots to handle sudden actuator emergencies. Our failure injection module models four operational modes per thruster channel $i$:
+1. **OK**: Unimpaired nominal command tracking ($u_{\text{eff}, i} = u_i$).
+2. **OFFLINE**: Complete electrical or motor burnout ($u_{\text{eff}, i} = 0$).
+3. **DEGRADED**: Propeller fouling, blade breakage, or bus voltage sag ($u_{\text{eff}, i} = \gamma_i u_i$, where $0 < \gamma_i < 1$).
+4. **STUCK**: Mechanical jam or ESC drive lockup ($u_{\text{eff}, i} = u_{\text{stuck}, i} = \text{const}$).
+
+The failure manager exposes health weights $w_i \in [0, 1]$ to thruster allocation algorithms, providing the analytical basis for reconfigurable fault-tolerant control.
+
+### H. Telemetry Recording & Bit-Exact Deterministic Replay
+
+Flight reconstruction, debriefing, and academic grading require repeatable mission replays. The telemetry subsystem logs 13-state kinematics, actuator outputs, pilot inputs, and autopilot flags at every integration step.
+Because the underlying MSS plant is continuous and deterministic, replaying logged pilot commands from identical initial conditions $\mathbf{x}_0$ replicates flight trajectories with state divergence error:
+$$\|\mathbf{x}_{\text{replay}}(t) - \mathbf{x}_{\text{recorded}}(t)\|_\infty < 10^{-4}$$
+over extended multi-minute flights, verified by automated unit tests. Telemetry is exportable to standard CSV and JSON formats directly from the cockpit HUD.
+
 ---
 
 ## VII. Roadmap & Future Capabilities
 
-Table VI outlines the development trajectory of the simulator ecosystem beyond the current verified baseline.
+Table VI outlines the development trajectory of the simulator ecosystem across completed and planned milestones.
 
 ### TABLE VI. SIMULATION DEVELOPMENT ROADMAP
 
-| Phase | Milestone | Focus Areas | Key Verification Deliverables |
-| :--- | :--- | :--- | :--- |
-| **1.0** | Initial Baseline | 5 ROV profiles, WebGL renderer, Three.js cameras | Functional interactive prototype |
-| **1.1** | Verification & Parity *(Complete)* | MSS functions port, Octave parity tests, GLB metadata verification | Automated test suite passing 12/12 baseline test targets |
-| **1.2** | Hydrodynamic & Kinematic Fidelity *(Complete)* | JSON schema, thruster deadbands, reverse asymmetry, advance ratio $J_a$, vertical current shear, unit quaternions, free-decay & step response, profile import/export UI, calibration workflow | 27/27 unit tests passing, terminal velocity saturation, gimbal singularity elimination, analytical hydrodynamic parity, live schema hot-loading |
-| **1.3** | Mission Operations | Gamepad input API, telemetry recording/replay, acoustic sensor noise (DVL/USBL) | Mission log playback parity, sensor drift models |
-| **2.0** | Training Platform | Lumped-mass umbilical cable dynamics, seabed contact mechanics, instructor failure injection | Multi-segment cable tension verification |
+| Phase | Milestone | Focus Areas | Key Verification Deliverables | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **1.0** | Initial Baseline | 5 ROV profiles, WebGL renderer, Three.js cameras | Functional interactive prototype | **Complete** |
+| **1.1** | Verification & Parity | MSS functions port, Octave parity tests, GLB metadata verification | Automated test suite passing 12/12 baseline test targets | **Complete** |
+| **1.2** | Hydrodynamic & Kinematic Fidelity | JSON schema, thruster deadbands, reverse asymmetry, advance ratio $J_a$, vertical current shear, unit quaternions, free-decay & step response, profile import/export UI, calibration workflow | 27/27 unit tests passing, terminal velocity saturation, gimbal singularity elimination, analytical hydrodynamic parity, live schema hot-loading | **Complete** |
+| **1.3** | Mission Operations | Gamepad API, 3D waypoint mission safety validation, CSV/JSON telemetry recording and deterministic replay ($< 10^{-4}$ state error), synthetic subsea instruments (DVL bottom-lock, depth transducer, compass, IMU, altimeter), umbilical tether catenary drag/snag, penalty contact dynamics, thruster failure injection | 33/33 unit tests passing, bit-exact replay repeatability, operational envelope validation, cockpit fault and telemetry controls | **Complete** |
+| **2.0** | Training Platform | Multi-node lumped-mass umbilical cable dynamics, acoustic underwater positioning (USBL/SBL), instructor scoring and scenario packs | Multi-segment cable tension verification, student assessment metrics | Planned |
 
 ---
 
 ## VIII. Conclusion
 
-This paper has detailed the mathematical foundation, web-native implementation, and empirical verification of a high-fidelity 6-DOF ROV simulator rooted in the Marine Systems Simulator (MSS) framework. By translating NTNU's canonical marine craft dynamics directly into modern browser technologies without third-party mathematical runtime dependencies, the simulator achieves zero-install accessibility while preserving rigorous numerical integrity. Key post-MSS extensions—including non-linear thruster deadbands, asymmetric reverse bollard pull efficiencies, through-water propeller advance ratio ($J_a$) degradation, oceanic boundary layer current shear layers, unit quaternion attitude kinematics on $S^3$, decoupled JSON parameter schemas with live browser cockpit calibration, and analytical free-decay / step-response hydrodynamic verification—bridge the gap between theoretical formulation and physical subsea engineering. Five benchmark case studies quantitatively prove that our propulsion, shear, quaternion, and hydrodynamic additions eliminate unphysical runaway velocities, reflect depth-varying water-column disturbance profiles, suppress actuator chatter, remove gimbal lock singularities during steep pitching excursions, and achieve $<0.9\%$ period agreement with theoretical damped oscillators while strictly preserving Lyapunov energy passivity. Automated test suites confirm exact parity with GNU Octave reference fixtures and analytical mechanics across 27 test targets. Future extensions will integrate lumped-mass umbilical dynamics and hardware-in-the-loop telemetry streaming, establishing the modern browser as a premier medium for collaborative oceanic robotics research and flight training.
+This paper has detailed the mathematical foundation, web-native implementation, and empirical verification of a high-fidelity 6-DOF ROV simulator rooted in the Marine Systems Simulator (MSS) framework. By translating NTNU's canonical marine craft dynamics directly into modern browser technologies without third-party mathematical runtime dependencies, the simulator achieves zero-install accessibility while preserving rigorous numerical integrity. Key extensions—including non-linear thruster deadbands, asymmetric reverse bollard pull efficiencies, through-water propeller advance ratio ($J_a$) degradation, oceanic boundary layer current shear, unit quaternion attitude kinematics on $S^3$, decoupled JSON parameter schemas with live browser cockpit calibration, synthetic subsea instrument suites (DVL, IMU, depth, compass), umbilical tether catenary dynamics, benthic penalty contact mechanics, thruster failure injection, and bit-exact deterministic telemetry replay—bridge the gap between theoretical formulation and physical subsea operations. Five benchmark case studies quantitatively prove that our propulsion, shear, quaternion, and hydrodynamic additions eliminate unphysical runaway velocities, reflect depth-varying water-column disturbance profiles, suppress actuator chatter, remove gimbal lock singularities during steep pitching excursions, and achieve $<0.9\%$ period agreement with theoretical damped oscillators while strictly preserving Lyapunov energy passivity. Automated test suites confirm exact parity across 33 test targets with zero failures. These advancements establish the modern browser as a premier, rigorous medium for collaborative oceanic robotics research, mission planning, and pilot training.
 
 ---
 

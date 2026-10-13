@@ -4,6 +4,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import createHabitat from './assets/underwater-research-habitat.mjs';
 import { RovDynamics, ROV_PROFILES, clamp } from './physics.js';
 import { validateProfile, formatProfileJson } from './mss/profileValidator.js';
+import { GamepadController } from './gamepad.js';
+import { TelemetryRecorder } from './telemetryRecorder.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -164,8 +166,30 @@ function renderThrusterChannels(profile) {
   panel.setAttribute('aria-label', `${profile.thrusters.length} thruster outputs for ${profile.name}`);
 }
 
+const gamepad = new GamepadController();
+const telemetry = new TelemetryRecorder();
+let activeFaultIndex = 0;
+const faultModes = [
+  { label: 'None', mode: 'OK', thruster: 0, val: 1.0 },
+  { label: 'T1 50% Degraded', mode: 'DEGRADED', thruster: 0, val: 0.5 },
+  { label: 'T1 Stuck 100%', mode: 'STUCK', thruster: 0, val: 1.0 },
+  { label: 'T1 Offline', mode: 'OFFLINE', thruster: 0, val: 0.0 },
+];
+
 function axis(positive, negative) { return (keys.has(positive) ? 1 : 0) - (keys.has(negative) ? 1 : 0); }
-function readPilot() { return { surge: axis('KeyW','KeyS'), sway: axis('KeyD','KeyA'), heave: axis('KeyF','KeyR'), yaw: axis('KeyE','KeyQ') }; }
+function readPilot() {
+  const kb = { surge: axis('KeyW','KeyS'), sway: axis('KeyD','KeyA'), heave: axis('KeyF','KeyR'), yaw: axis('KeyE','KeyQ') };
+  const gp = gamepad.poll();
+  if (gp.active) {
+    return {
+      surge: Math.abs(gp.surge) > 0.05 ? gp.surge : kb.surge,
+      sway: Math.abs(gp.sway) > 0.05 ? gp.sway : kb.sway,
+      heave: Math.abs(gp.heave) > 0.05 ? gp.heave : kb.heave,
+      yaw: Math.abs(gp.yaw) > 0.05 ? gp.yaw : kb.yaw,
+    };
+  }
+  return kb;
+}
 
 function syncStatus() {
   const leg = demoRoute[demoLeg];
@@ -244,6 +268,47 @@ $('trailButton').addEventListener('click', () => { showTrail=!showTrail; trail.v
 $('assistButton').addEventListener('click', () => { if (demoMode) return; assist=!assist; $('assistButton').classList.toggle('active',assist); $('assistButton').setAttribute('aria-pressed',assist); targetDepth=sim.state[8]; targetHeading=sim.state[11]; updateModeIndicators(); });
 $('current').addEventListener('input', event => { sim.current.speed=Number(event.target.value); $('currentOutput').textContent=`${sim.current.speed.toFixed(2)} m/s`; });
 $('rovClass').addEventListener('change', event => loadRovClass(event.target.value));
+
+$('recordButton')?.addEventListener('click', () => {
+  if (!telemetry.isRecording) {
+    telemetry.startRecording();
+    $('recordButton').textContent = 'Stop & Save CSV';
+    $('recordButton').setAttribute('aria-pressed', 'true');
+    $('recordButton').style.borderColor = 'var(--coral)';
+    $('recordButton').style.color = 'var(--coral)';
+  } else {
+    telemetry.stopRecording();
+    $('recordButton').textContent = 'Rec Telemetry';
+    $('recordButton').setAttribute('aria-pressed', 'false');
+    $('recordButton').style.borderColor = '';
+    $('recordButton').style.color = '';
+
+    const csv = telemetry.exportCsv();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mss-telemetry-${Math.round(sim.time)}s.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+});
+
+$('faultButton')?.addEventListener('click', () => {
+  activeFaultIndex = (activeFaultIndex + 1) % faultModes.length;
+  const f = faultModes[activeFaultIndex];
+  if (f.mode === 'OK') {
+    sim.failureInjector.resetAll();
+    $('faultButton').textContent = 'Fault: None';
+    $('faultButton').style.borderColor = '';
+    $('faultButton').style.color = '';
+  } else {
+    sim.failureInjector.setFault(f.thruster, f.mode, f.val);
+    $('faultButton').textContent = `Fault: ${f.label}`;
+    $('faultButton').style.borderColor = 'var(--coral)';
+    $('faultButton').style.color = 'var(--coral)';
+  }
+});
 
 // Profile Parameter Import/Export & Real-Time Validation
 const profileModal = $('profileModal');
@@ -398,7 +463,13 @@ function updateSimulation(frameDt) {
   }
   sim.setPilot(pilot, assist, { depth: targetDepth, heading: targetHeading });
   accumulator += Math.min(frameDt, .05);
-  while (accumulator >= .01) { sim.step(.01); accumulator -= .01; }
+  while (accumulator >= .01) {
+    sim.step(.01);
+    if (telemetry.isRecording) {
+      telemetry.recordFrame(sim.time, sim.state, sim.thrusters, pilot, assist);
+    }
+    accumulator -= .01;
+  }
 }
 
 function updateVisuals(dt) {
@@ -477,6 +548,25 @@ function updateUI(dt) {
   $('heading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingReadout').textContent=`HDG ${String(Math.round(hdg)).padStart(3,'0')}°`;
   $('compassHeading').textContent=`${String(Math.round(hdg)).padStart(3,'0')}°`; $('headingDial').style.setProperty('--heading',`${-hdg}deg`);
   $('speed').textContent=`${Math.hypot(u,v,w).toFixed(2)} m/s`; $('surge').textContent=`${u.toFixed(2)} m/s`; $('sway').textContent=`${v.toFixed(2)} m/s`; $('heave').textContent=`${w.toFixed(2)} m/s`; $('altitude').textContent=`${Math.max(0,18-d).toFixed(2)} m`; $('currentValue').textContent=`${(sim.localCurrentSpeed ?? sim.current.speed).toFixed(2)} m/s`;
+  if (sim.tetherState) {
+    const tp = $('tetherPayout');
+    if (tp) tp.textContent = `${sim.tetherState.payout.toFixed(1)} m`;
+    const isSnag = sim.tetherState.snag || sim.tetherState.advisory;
+    const tInd = $('tetherIndicator');
+    if (tInd) {
+      tInd.classList.toggle('active', !isSnag);
+      const span = tInd.querySelector('span');
+      if (span) span.textContent = sim.tetherState.snag ? 'SNAG ALERT' : (sim.tetherState.advisory ? 'TETHER 88%' : 'Tether OK');
+    }
+  }
+  if (sim.sensorReadings?.dvl) {
+    const dvlEl = $('dvlLock');
+    if (dvlEl) {
+      dvlEl.textContent = sim.sensorReadings.dvl.bottomLock ? 'LOCK' : 'LOST';
+      dvlEl.style.color = sim.sensorReadings.dvl.bottomLock ? 'var(--cyan)' : 'var(--coral)';
+    }
+  }
+  $('gamepadIndicator')?.classList.toggle('active', gamepad.isConnected);
   $('attitudeDial').style.setProperty('--roll',`${-degrees(phi)}deg`); $('attitudeDial').style.setProperty('--pitch',`${clamp(degrees(theta)*.8,-24,24)}px`);
   const minutes=Math.floor(sim.time/60),seconds=(sim.time%60).toFixed(1).padStart(4,'0'); $('elapsed').textContent=`${String(minutes).padStart(2,'0')}:${seconds}`;
   let load=0; sim.thrusters.forEach((x,i)=>{ $('thruster'+(i+1)).style.setProperty('--load',`${Math.abs(x)*100}%`); $('thruster'+(i+1)).classList.toggle('reverse',x<0); load+=x*x; });

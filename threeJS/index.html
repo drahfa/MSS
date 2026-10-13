@@ -37,6 +37,8 @@
         <div class="depth-ruler" aria-hidden="true"><span>0 m</span><i></i><span>10</span><i></i><span>20</span><i></i><span>30</span></div>
         <div class="viewport-tools">
           <button id="profileButton" type="button" aria-label="Profile parameter import/export">Profile JSON</button>
+          <button id="recordButton" type="button" aria-pressed="false">Rec Telemetry</button>
+          <button id="faultButton" type="button">Fault: None</button>
           <button id="demoButton" type="button" aria-pressed="false">Demo <kbd>~</kbd></button>
           <button id="cameraButton" type="button" aria-label="Change camera view">Third person <kbd>C</kbd></button>
           <button id="trailButton" type="button" aria-pressed="true">Trail on</button>
@@ -63,8 +65,8 @@
             <div id="stationIndicator" class="active"><i></i><span>Station keep</span></div>
             <div id="headingIndicator" class="active"><i></i><span>Auto heading</span></div>
             <div id="depthIndicator" class="active"><i></i><span>Auto depth</span></div>
-            <div id="demoIndicator"><i></i><span>Demo route</span></div>
-            <div><i></i><span>Tether clear</span></div>
+            <div id="tetherIndicator" class="active"><i></i><span>Tether OK</span></div>
+            <div id="gamepadIndicator"><i></i><span>Gamepad</span></div>
           </div>
         </section>
 
@@ -94,6 +96,8 @@
           <div><span>Sway</span><b id="sway">0.00</b></div>
           <div><span>Heave</span><b id="heave">0.00</b></div>
           <div><span>Altitude</span><b id="altitude">16.00 m</b></div>
+          <div><span>Tether</span><b id="tetherPayout">2.0 m</b></div>
+          <div><span>DVL Lock</span><b id="dvlLock">LOCK</b></div>
         </section>
 
         <section class="history-block">

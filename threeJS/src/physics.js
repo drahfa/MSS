@@ -1,5 +1,9 @@
 import { buildVehicle, rovPlant } from './mss/rovPlant.js';
 import { rk4, ssa, euler2q, q2euler, Rquat, normalizeQuat } from './mss/library.js';
+import { TetherModel } from './tether.js';
+import { ContactModel } from './contact.js';
+import { FailureInjector } from './failureInjection.js';
+import { SensorSuite } from './sensors.js';
 
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 export const wrapPi = angle => ssa(angle);
@@ -229,6 +233,13 @@ export class RovDynamics {
     this.allocate = makeAllocator(profile);
     this.thrusters = new Array(profile.thrusters.length).fill(0);
     this.thrusterTarget = new Array(profile.thrusters.length).fill(0);
+    this.failureInjector = new FailureInjector(profile.thrusters.length);
+    this.tether = new TetherModel();
+    this.contact = new ContactModel();
+    this.sensors = new SensorSuite();
+    this.tetherState = null;
+    this.contactState = null;
+    this.sensorReadings = null;
   }
 
   reset() {
@@ -269,6 +280,9 @@ export class RovDynamics {
     const actuatorAlpha = 1 - Math.exp(-dt / this.profile.actuatorTau);
     this.thrusters = this.thrusters.map((v, i) => v + (this.thrusterTarget[i] - v) * actuatorAlpha);
 
+    // Apply active fault injection to commanded outputs
+    const effectiveThrusters = this.failureInjector.processCommands(this.thrusters);
+
     // Current shear: calculate local current speed at vehicle depth (state[8])
     const currentSpeed = currentShear(this.state[8], this.current.speed, 18.0);
     this.localCurrentSpeed = currentSpeed;
@@ -293,7 +307,24 @@ export class RovDynamics {
       this.state[5],
     ];
 
-    const tau = thrusterWrench(this.thrusters, this.profile, nu_r);
+    const tauThruster = thrusterWrench(effectiveThrusters, this.profile, nu_r);
+
+    // External interaction forces: umbilical tether and contact response
+    const pos = this.state.slice(6, 9);
+    const nu1 = this.state.slice(0, 3);
+    const tetherData = this.tether.compute(pos, nu1, R);
+    const contactData = this.contact.evaluate(pos, nu1, R);
+    this.tetherState = tetherData;
+    this.contactState = contactData;
+
+    const tau = [
+      tauThruster[0] + tetherData.totalForceBody[0] + contactData.contactForceBody[0],
+      tauThruster[1] + tetherData.totalForceBody[1] + contactData.contactForceBody[1],
+      tauThruster[2] + tetherData.totalForceBody[2] + contactData.contactForceBody[2],
+      tauThruster[3],
+      tauThruster[4],
+      tauThruster[5],
+    ];
 
     // Integrate the pure unconstrained MSS plant via MSS rk4 using depth-sheared current
     this.state = rk4(rovPlant, dt, this.state, tau, this.vehicle, currentSpeed, this.current.direction);
@@ -306,7 +337,10 @@ export class RovDynamics {
     this.state[12] = qNorm[3];
 
     // Physical seabed boundary limits applied outside plant as environmental constraints
-    this.state[8] = clamp(this.state[8], 0.15, 17.5); // Seabed is at 18m
+    this.state[8] = clamp(this.state[8], 0.15, 17.85); // Seabed is at 18m
     this.time += dt;
+
+    // Sample synthetic instrument sensors
+    this.sensorReadings = this.sensors.sample(this.state, null, R, dt);
   }
 }
