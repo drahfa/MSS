@@ -34,10 +34,10 @@ Despite the operational necessity, multi-ROV deployments introduce severe physic
 3. **Cyber-Physical Interoperability**: Bridging browser-based simulation twins with production robotic runtimes requires standardized, high-speed serialization matching industry protocols (ROS 2 and MAVLink/ArduSub) [8]–[10].
 
 This paper establishes **Paper 5** in our simulation trilogy:
-- **Paper 1** ([`IEEE_TECHNICAL_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT.md)): 6-DOF MSS plant formulation on $S^3$, thrusters, shear layers.
-- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT.md)): Empirical sea-trial grounding (BlueROV2 Heavy), scenario architecture, FQM scoring.
-- **Paper 3** ([`IEEE_CABLE_NAVIGATION_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_CABLE_NAVIGATION_REPORT.md)): Discretized $N$-node lumped-mass umbilical dynamics and 15-state ES-EKF navigation fusion.
-- **Paper 4** ([`IEEE_UVMS_MANIPULATION_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_UVMS_MANIPULATION_REPORT.md)): UVMS articulated kinematics, link hydrodynamics, and base reaction wrench coupling.
+- **Paper 1** ([`IEEE_TECHNICAL_REPORT-Paper-1.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md)): 6-DOF MSS plant formulation on $S^3$, thrusters, shear layers.
+- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md)): Empirical sea-trial grounding (BlueROV2 Heavy), scenario architecture, FQM scoring.
+- **Paper 3** ([`IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md`](file:///d:/GitHub/MSS/to-publish/IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md)): Discretized $N$-node lumped-mass umbilical dynamics and 15-state ES-EKF navigation fusion.
+- **Paper 4** ([`IEEE_UVMS_MANIPULATION_REPORT-Paper-4.md`](file:///d:/GitHub/MSS/to-publish/IEEE_UVMS_MANIPULATION_REPORT-Paper-4.md)): UVMS articulated kinematics, link hydrodynamics, and base reaction wrench coupling.
 - **Paper 5** (This Paper): Multi-ROV cooperative operations, dual-tether anti-entanglement, cooperative payload transport, and MAVLink/ROS 2 digital twin telemetry bridges.
 
 ---

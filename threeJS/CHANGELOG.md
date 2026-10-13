@@ -2,11 +2,30 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
+## [3.0.0] - 2026-10-13
+
+### Added
+
+- Independent IEEE Technical Report for Milestone 3.0: `to-publish/IEEE_SONAR_PERCEPTION_REPORT-Paper-6.md` (covering synthetic acoustic wave propagation, multibeam forward-looking sonar simulation, physical two-way transmission loss, Lambertian backscatter, occlusion shadow casting, and polar-to-Cartesian scan conversion).
+- 2D Multibeam Forward-Looking Sonar (FLS) Simulation Engine (`src/forwardLookingSonar.js`):
+  - 96 acoustic beams $\times$ 128 range bins spanning $120^\circ$ horizontal azimuth with $20^\circ$ vertical elevation fan beam.
+  - Physical two-way transmission loss ($40\log_{10} r$) and frequency-dependent seawater chemical absorption $\alpha(f)$ ($0.088\text{ dB/m}$ at $450\text{ kHz}$, $0.285\text{ dB/m}$ at $900\text{ kHz}$).
+  - Receiver Time-Varied Gain (TVG) compensation equalizing dynamic range across near- and far-field acoustic returns.
+  - Empirical Lambertian acoustic surface backscatter and seabed grazing angle reverberation.
+  - True geometric occlusion shadow casting ($I = 0$) behind solid underwater structures and boulders.
+  - Real-time HTML5 polar sector scan converter rendering to phosphor amber and cyan oceanic palettes with range rings and azimuth guides.
+- Flight Cockpit Console Sonar HUD Widget (`index.html`, `src/main.js`):
+  - Added dedicated Forward Sonar (FLS) canvas widget with interactive mode toggle between $450\text{ kHz}$ Navigation ($40\text{ m}$) and $900\text{ kHz}$ Inspection ($20\text{ m}$).
+- Sonar Simulation Automated Test Suite (`test/sonar-simulation.test.js`):
+  - 5 automated unit tests validating beam count, range resolution, dual-frequency mode switching, acoustic target detection peaks, shadow occlusion, and headless canvas rendering.
+- Expanded project automated test suite to 66/66 passing unit tests (0 failures).
+- Standardized all 6 published technical report filenames to `-Paper-[num].md` format across `to-publish/` and brain artifacts.
+
 ## [2.3.0] - 2026-10-13
 
 ### Added
 
-- Independent IEEE Technical Report for Milestone 2.3: `to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md` (covering multi-agent cooperative subsea operations, 3D dual-tether anti-entanglement spatial clearance, cooperative closed-chain payload mechanics, and networked digital twin telemetry bridges).
+- Independent IEEE Technical Report for Milestone 2.3: `to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT-Paper-5.md` (covering multi-agent cooperative subsea operations, 3D dual-tether anti-entanglement spatial clearance, cooperative closed-chain payload mechanics, and networked digital twin telemetry bridges).
 - Multi-ROV Cooperative Operations & Networked Telemetry Engine (`src/multiRovTetherBridge.js`):
   - Fast 3D segment-to-segment Euclidean minimum distance algorithm between dual $N$-node lumped-mass umbilical cables.
   - Progressive entanglement envelopes: warning advisory at $d_{\min} \le 3.0\text{ m}$ and critical emergency alert at $d_{\min} \le 1.0\text{ m}$.
@@ -28,7 +47,7 @@ All notable changes to the browser ROV simulator are documented here. The format
 
 ### Added
 
-- Independent IEEE Technical Report for Milestone 2.2: `to-publish/IEEE_UVMS_MANIPULATION_REPORT.md` (covering Underwater Vehicle-Manipulator Systems kinematics, Newton-Euler base reaction wrenches, and link Morison hydrodynamics).
+- Independent IEEE Technical Report for Milestone 2.2: `to-publish/IEEE_UVMS_MANIPULATION_REPORT-Paper-4.md` (covering Underwater Vehicle-Manipulator Systems kinematics, Newton-Euler base reaction wrenches, and link Morison hydrodynamics).
 - Underwater Vehicle-Manipulator System (UVMS) Physics Engine (`src/uvmsManipulator.js`):
   - Denavit-Hartenberg (D-H) forward kinematics chain and $6 \times n$ geometric Jacobian $\mathbf{J}(\mathbf{q})$.
   - Singularity-robust Damped Least-Squares (DLS) inverse kinematics converging to sub-millimeter end-effector accuracy ($< 0.001\text{ m}$).
@@ -43,7 +62,7 @@ All notable changes to the browser ROV simulator are documented here. The format
 
 ### Added
 
-- Independent IEEE Technical Report for Milestone 2.1: `to-publish/IEEE_CABLE_NAVIGATION_REPORT.md` (covering multi-node viscoelastic lumped-mass umbilical dynamics and 15-state Error-State Extended Kalman Filter acoustic-inertial navigation fusion).
+- Independent IEEE Technical Report for Milestone 2.1: `to-publish/IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md` (covering multi-node viscoelastic lumped-mass umbilical dynamics and 15-state Error-State Extended Kalman Filter acoustic-inertial navigation fusion).
 - $N$-Node Viscoelastic Lumped-Mass Umbilical Cable Dynamics Engine (`src/lumpedMassTether.js`):
   - 12-node spatial discretization with flat typed `Float64Array` memory layout achieving $16.5\ \mu\text{s}$ execution per physics step.
   - Non-linear unilateral axial tension (zero under compression, Hookean under stretch) with internal viscoelastic damping.
@@ -64,7 +83,7 @@ All notable changes to the browser ROV simulator are documented here. The format
 
 ### Added
 
-- Independent IEEE Technical Report for post-platform training development: `to-publish/IEEE_TRAINING_PLATFORM_REPORT.md` (covering empirical flume/tank grounding, declarative scenario architecture, objective pilot scoring engine, and instructor station controls).
+- Independent IEEE Technical Report for post-platform training development: `to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md` (covering empirical flume/tank grounding, declarative scenario architecture, objective pilot scoring engine, and instructor station controls).
 - Empirical Sea-Trial Grounding Test Suite (`test/empirical-validation.test.js`):
   - Calibrated surge drag regression against published BlueROV2 Heavy tow-tank carriage data ($R^2 > 0.99$).
   - Reverse bollard efficiency matching physical load cell dynamometry within $2\%$ margin.
@@ -161,7 +180,7 @@ All notable changes to the browser ROV simulator are documented here. The format
   - Validated coupled $6 \times 6$ mass acceleration $\dot{u}(0) = (\mathbf{M}^{-1})_{11}\tau_u$ and asymptotic convergence to closed-form terminal velocity $u_\infty$ ($< 1.3\%$ error).
   - Proved unforced mechanical energy monotonic dissipation $\dot{E} \le 0$ (zero non-decreasing steps, $>98\%$ energy dissipated over 12 seconds).
 - Automated test suite expanded to 27/27 unit tests passing across kinematics, quaternions, propulsion, schema, hydrodynamics, and hot-loading.
-- Comprehensive IEEE Transactions-style technical paper and architectural specification expanded in `to-publish/IEEE_TECHNICAL_REPORT.md` with five benchmark case studies, Table V quantitative free-decay metrics, and live calibration workflows.
+- Comprehensive IEEE Transactions-style technical paper and architectural specification expanded in `to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md` with five benchmark case studies, Table V quantitative free-decay metrics, and live calibration workflows.
 
 ## [1.1.0] - 2026-10-13
 

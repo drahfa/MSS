@@ -1,6 +1,6 @@
 {
   "name": "mss-rov-simulator",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,6 +13,8 @@
     "three": "0.180.0"
   },
   "devDependencies": {
+    "katex": "^0.19.0",
+    "marked": "^18.1.1",
     "vite": "7.1.9"
   }
 }

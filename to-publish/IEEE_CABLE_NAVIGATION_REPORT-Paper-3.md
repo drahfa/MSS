@@ -38,8 +38,8 @@ Consequently, modern subsea operations require tight sensor fusion: coupling hig
 While proprietary commercial software suites (e.g., OrcaFlex, Kongsberg HiPAP simulators) provide high-end modeling of cable dynamics or navigation filtering in isolated native environments, zero-dependency browser engines have traditionally relied on crude approximations—either assuming single straight-line catenary equations or treating vehicle positions as perfectly known ground truth.
 
 This paper establishes **Paper 3** in our subsea simulation trilogy:
-- **Paper 1** ([`IEEE_TECHNICAL_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT.md)): Mathematical translation of the NTNU Marine Systems Simulator (MSS), coupled 6-DOF rigid-body and added-mass plant, unit quaternions on $S^3$, and non-linear thruster mechanics.
-- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT.md)): Validated pilot training curriculum, empirical sea-trial grounding, declarative scenario architecture, and objective Flight Quality Metric (FQM) scoring.
+- **Paper 1** ([`IEEE_TECHNICAL_REPORT-Paper-1.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md)): Mathematical translation of the NTNU Marine Systems Simulator (MSS), coupled 6-DOF rigid-body and added-mass plant, unit quaternions on $S^3$, and non-linear thruster mechanics.
+- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md)): Validated pilot training curriculum, empirical sea-trial grounding, declarative scenario architecture, and objective Flight Quality Metric (FQM) scoring.
 - **Paper 3** (This Paper): Discretized multi-node lumped-mass umbilical dynamics and 15-state Error-State Extended Kalman Filter (ES-EKF) acoustic-inertial navigation fusion.
 
 ---

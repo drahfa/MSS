@@ -12,6 +12,7 @@ import { InstructorStation } from './instructorStation.js';
 import { getLanguage, setLanguage, t } from './i18n.js';
 import { ManipulatorView } from './manipulatorView.js';
 import { MultiRovView } from './multiRovView.js';
+import { ForwardLookingSonar } from './forwardLookingSonar.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -89,10 +90,36 @@ scene.add(rov);
 
 const manipulatorView = new ManipulatorView(rov);
 const multiRovView = new MultiRovView(scene);
+const sonar = new ForwardLookingSonar();
 let armActive = false;
 let fleetActive = false;
 let armGrip = 0.5;
+let sonarPalette = 'amber';
 manipulatorView.setVisible(false);
+
+function drawSonar() {
+  const sonarCanvas = $('sonarCanvas');
+  if (sonarCanvas) {
+    console.log('DRAW_SONAR_CALLED', sonarCanvas.width, sonarCanvas.height);
+    sonar.scan(sim.state.slice(6, 9), sim.getEuler());
+    sonar.renderDisplay(sonarCanvas, sonarPalette);
+  }
+}
+
+$('sonarModeBtn')?.addEventListener('click', () => {
+  if (sonar.frequencyKhz === 450) {
+    sonar.setMode('inspection');
+    $('sonarModeBtn').textContent = '900 kHz · 20m';
+    $('sonarModeBtn').style.color = 'var(--cyan)';
+    sonarPalette = 'cyan';
+  } else {
+    sonar.setMode('navigation');
+    $('sonarModeBtn').textContent = '450 kHz · 40m';
+    $('sonarModeBtn').style.color = 'var(--amber)';
+    sonarPalette = 'amber';
+  }
+  drawSonar();
+});
 
 async function loadRovClass(key) {
   const profile = ROV_PROFILES[key];
@@ -770,12 +797,11 @@ function updateUI(dt) {
     const scoreData = scoringEngine.computeScore();
     $('liveScore').textContent = scoreData.score.toFixed(1);
     $('liveGrade').textContent = `Grade ${scoreData.grade}`;
-    $('scoreWaypoint').textContent = scoreData.waypointProgress;
-    $('scoreRmsCte').textContent = `${scoreData.rmsCte.toFixed(2)} m`;
     $('scoreInfractions').textContent = scoreData.infractions.length ? scoreData.infractions.join(', ') : 'None';
     $('scoreInfractions').style.color = scoreData.infractions.length ? 'var(--coral)' : '#6e9298';
   }
   depthHistory.push({time:sim.time,depth:d}); while(depthHistory.length>375)depthHistory.shift(); drawDepthChart();
+  drawSonar();
 }
 
 function animate(now) {
@@ -785,3 +811,5 @@ function animate(now) {
 resize(); requestAnimationFrame(animate);
 updateModeIndicators();
 loadRovClass(vehicleKey);
+updateUI(0.1);
+drawSonar();

@@ -58,11 +58,12 @@ The Assist control holds depth, heading, and attitude within the authority avail
 - Depth history, attitude, heading, velocity, current, and dynamic thruster telemetry
 - Responsive operator-console layout based on a subsea flight-screen visual language
 - Dedicated IEEE Transactions-style technical reports series:
-  - **Paper 1**: Core 6-DOF MSS Plant, Quaternions & Propulsion ([`to-publish/IEEE_TECHNICAL_REPORT.md`](../to-publish/IEEE_TECHNICAL_REPORT.md))
-  - **Paper 2**: Pilot Training Platform, Scenarios & FQM Scoring ([`to-publish/IEEE_TRAINING_PLATFORM_REPORT.md`](../to-publish/IEEE_TRAINING_PLATFORM_REPORT.md))
-  - **Paper 3**: Lumped-Mass Umbilical Dynamics & ES-EKF Navigation ([`to-publish/IEEE_CABLE_NAVIGATION_REPORT.md`](../to-publish/IEEE_CABLE_NAVIGATION_REPORT.md))
-  - **Paper 4**: Subsea UVMS Robotic Manipulation ([`to-publish/IEEE_UVMS_MANIPULATION_REPORT.md`](../to-publish/IEEE_UVMS_MANIPULATION_REPORT.md))
-  - **Paper 5**: Multi-ROV Cooperative Operations & Networked Twin ([`to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md`](../to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT.md))
+  - **Paper 1**: Core 6-DOF MSS Plant, Quaternions & Propulsion ([`to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md`](../to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md))
+  - **Paper 2**: Pilot Training Platform, Scenarios & FQM Scoring ([`to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md`](../to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md))
+  - **Paper 3**: Lumped-Mass Umbilical Dynamics & ES-EKF Navigation ([`to-publish/IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md`](../to-publish/IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md))
+  - **Paper 4**: Subsea UVMS Robotic Manipulation ([`to-publish/IEEE_UVMS_MANIPULATION_REPORT-Paper-4.md`](../to-publish/IEEE_UVMS_MANIPULATION_REPORT-Paper-4.md))
+  - **Paper 5**: Multi-ROV Cooperative Operations & Networked Twin ([`to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT-Paper-5.md`](../to-publish/IEEE_MULTI_ROV_NETWORKED_REPORT-Paper-5.md))
+  - **Paper 6**: Synthetic Multibeam Forward-Looking Sonar (FLS) Perception ([`to-publish/IEEE_SONAR_PERCEPTION_REPORT-Paper-6.md`](../to-publish/IEEE_SONAR_PERCEPTION_REPORT-Paper-6.md))
 
 ## System overview
 

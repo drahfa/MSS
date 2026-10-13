@@ -34,9 +34,9 @@ Unlike industrial manipulators bolted to rigid factory foundations, an underwate
 Modeling this coupled multi-body interaction is known in marine robotics literature as the **Underwater Vehicle-Manipulator System (UVMS)** problem [10]–[12].
 
 This paper establishes **Paper 4** in our marine simulation series:
-- **Paper 1** ([`IEEE_TECHNICAL_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT.md)): MSS 6-DOF vehicle plant on $S^3$, non-linear thrusters, 3D current shear.
-- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT.md)): Sea-trial empirical grounding (BlueROV2 Heavy), scenario architecture, FQM scoring.
-- **Paper 3** ([`IEEE_CABLE_NAVIGATION_REPORT.md`](file:///d:/GitHub/MSS/to-publish/IEEE_CABLE_NAVIGATION_REPORT.md)): $N$-node lumped-mass umbilical dynamics and 15-state ES-EKF navigation fusion.
+- **Paper 1** ([`IEEE_TECHNICAL_REPORT-Paper-1.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TECHNICAL_REPORT-Paper-1.md)): MSS 6-DOF vehicle plant on $S^3$, non-linear thrusters, 3D current shear.
+- **Paper 2** ([`IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md`](file:///d:/GitHub/MSS/to-publish/IEEE_TRAINING_PLATFORM_REPORT-Paper-2.md)): Sea-trial empirical grounding (BlueROV2 Heavy), scenario architecture, FQM scoring.
+- **Paper 3** ([`IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md`](file:///d:/GitHub/MSS/to-publish/IEEE_CABLE_NAVIGATION_REPORT-Paper-3.md)): $N$-node lumped-mass umbilical dynamics and 15-state ES-EKF navigation fusion.
 - **Paper 4** (This Paper): UVMS articulated kinematics, link hydrodynamics, and dynamic floating-base reaction wrench coupling.
 
 ---
