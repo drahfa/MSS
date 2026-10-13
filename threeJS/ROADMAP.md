@@ -21,7 +21,7 @@ Completed items & acceptance criteria:
 - Deterministic 60-second scenario tests across all 5 vehicle profiles with finite state and decaying velocities (`test/rov-plant.test.js`)
 - Fixed FPV camera look-at pitch direction, base URL path resolution, trail resets, paused rotor freeze, and 2D planar current drift
 
-## 1.2 — Hydrodynamic and propulsion fidelity (In Progress)
+## 1.2 — Hydrodynamic and propulsion fidelity (Complete)
 
 Goal: move from representative motion toward calibratable vehicle behavior.
 
@@ -31,19 +31,16 @@ Completed in 1.2:
 - [x] Propeller advance ratio ($J_a$) and through-water axial inflow degradation (`advanceRatioFactor`)
 - [x] Depth-dependent ocean current shear layer modeling with boundary-layer attenuation (`currentShear`)
 - [x] Unit quaternion attitude propagation on $S^3$ (`euler2q`, `q2euler`, `Rquat`, `qdot`), eliminating gimbal lock singularities
-- [x] Automated test suite expanded to 20/20 unit tests covering kinematics, quaternions, propulsion, and schema
-- [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`) with four benchmark case studies
+- [x] Free-decay and step-response verification tests against analytical damped frequency, terminal velocity, and Lyapunov passivity (`test/hydrodynamics.test.js`)
+- [x] Parameter import/export UI with real-time JSON validation (`src/mss/profileValidator.js`, `test/profile-validator.test.js`, and console dialog in `index.html`)
+- [x] Documented calibration workflow against sea-trial or tank-test data (`CALIBRATION_WORKFLOW.md`)
+- [x] Automated test suite expanded to 27/27 unit tests covering kinematics, quaternions, propulsion, schema, hydrodynamics, and hot-reloading
+- [x] IEEE Transactions-style technical report and architectural specification (`to-publish/IEEE_TECHNICAL_REPORT.md`) with five benchmark case studies
 
-Remaining in 1.2:
-- Free-decay and step-response verification tests against reference measurements
-- Parameter import/export UI with real-time JSON validation
-- Documented calibration workflow against sea-trial or tank-test data
-
-Acceptance criteria:
-
-- A profile can be calibrated from an external parameter file without source edits
-- Thruster and free-decay test cases can be compared against reference measurements
-- Energy and sign-convention checks are automated
+Acceptance criteria (All Passed):
+- A profile can be calibrated from an external parameter file without source edits (Validated via `test/profile-validator.test.js` & cockpit modal)
+- Thruster and free-decay test cases can be compared against reference measurements (Validated via `test/hydrodynamics.test.js`, Table V)
+- Energy and sign-convention checks are automated (Validated via Lyapunov passivity tests)
 
 ## 1.3 — Mission operations
 

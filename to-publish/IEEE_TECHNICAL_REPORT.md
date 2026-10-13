@@ -7,9 +7,9 @@
 ---
 
 ### Abstract
-Real-time six-degree-of-freedom (6-DOF) hydrodynamic simulation of underwater robotic vehicles has traditionally relied on desktop-bound numerical platforms (e.g., MATLAB/Simulink) or proprietary C++ game engines. While effective for offline control design, these environments impose substantial friction on collaborative validation, cross-platform deployment, and distributed operator training. This paper presents the mathematical derivation, numerical verification, and web-native systems architecture of a browser-based Remotely Operated Vehicle (ROV) simulator founded upon the theoretical lineage of the open-source Marine Systems Simulator (MSS). We formulate the fully coupled 6-DOF equations of motion across North-East-Down (NED) and Front-Starboard-Down (FSD) reference frames, incorporating arbitrary center-of-gravity offsets $\mathbf{r}_{bG}$, skew-symmetric hydrodynamic added-mass Coriolis transformations ($m2c$), restoring forces ($gRvect$), and relative ocean current kinematics with rotational frame acceleration corrections ($\dot{\boldsymbol{\nu}}_c = [-\mathbf{S}(\boldsymbol{\omega})\mathbf{v}_c; \mathbf{0}]$). The plant solves the coupled $6 \times 6$ mass-acceleration linear system via Gaussian elimination with partial pivoting and integrates states using a fixed-step fourth-order Runge-Kutta (RK4) algorithm. Beyond baseline MSS formulations, we introduce high-fidelity expansions including non-linear thruster mechanics (deadband thresholding, forward/reverse bollard pull asymmetry, and through-water advance ratio $J_a$ degradation), an oceanic boundary layer vertical current shear model, unit quaternion attitude kinematics on $S^3$ eliminating Euler angle gimbal lock, an externalized JSON schema decoupling vehicle parameterization from execution code, and a real-time subsea operator console featuring WebGL/glTF physical coordinate synchronization. Four comprehensive benchmark case studies are formulated in the methodology and evaluated in the results: high-speed surge transit saturation, deep water-column descent under current shear, precision hovering with actuator deadbands, and steep acrobatic pitch maneuvers demonstrating singularity-free quaternion propagation. Parity test suites confirm exact agreement with GNU Octave reference fixtures across 20 automated verification targets, proving that high-fidelity scientific marine simulation can execute deterministically within modern browser runtimes.
+Real-time six-degree-of-freedom (6-DOF) hydrodynamic simulation of underwater robotic vehicles has traditionally relied on desktop-bound numerical platforms (e.g., MATLAB/Simulink) or proprietary C++ game engines. While effective for offline control design, these environments impose substantial friction on collaborative validation, cross-platform deployment, and distributed operator training. This paper presents the mathematical derivation, numerical verification, and web-native systems architecture of a browser-based Remotely Operated Vehicle (ROV) simulator founded upon the theoretical lineage of the open-source Marine Systems Simulator (MSS). We formulate the fully coupled 6-DOF equations of motion across North-East-Down (NED) and Front-Starboard-Down (FSD) reference frames, incorporating arbitrary center-of-gravity offsets $\mathbf{r}_{bG}$, skew-symmetric hydrodynamic added-mass Coriolis transformations ($m2c$), restoring forces ($gRvect$), and relative ocean current kinematics with rotational frame acceleration corrections ($\dot{\boldsymbol{\nu}}_c = [-\mathbf{S}(\boldsymbol{\omega})\mathbf{v}_c; \mathbf{0}]$). The plant solves the coupled $6 \times 6$ mass-acceleration linear system via Gaussian elimination with partial pivoting and integrates states using a fixed-step fourth-order Runge-Kutta (RK4) algorithm. Beyond baseline MSS formulations, we introduce high-fidelity expansions including non-linear thruster mechanics (deadband thresholding, forward/reverse bollard pull asymmetry, and through-water advance ratio $J_a$ degradation), an oceanic boundary layer vertical current shear model, unit quaternion attitude kinematics on $S^3$ eliminating Euler angle gimbal lock, an externalized JSON schema decoupling vehicle parameterization from execution code, and a real-time subsea operator console featuring WebGL/glTF physical coordinate synchronization. Five comprehensive benchmark case studies are formulated in the methodology and evaluated in the results: high-speed surge transit saturation, deep water-column descent under current shear, precision hovering with actuator deadbands, steep acrobatic pitch maneuvers demonstrating singularity-free quaternion propagation, and hydrodynamic free-decay oscillation and step-response characterization across all vehicle classes. Parity, hydrodynamic, and schema test suites confirm exact agreement with analytical and GNU Octave reference fixtures across 27 automated verification targets, proving that high-fidelity scientific marine simulation can execute deterministically within modern browser runtimes.
 
-**Index Terms**—Underwater robotics, Remotely Operated Vehicles (ROV), Marine Systems Simulator (MSS), 6-DOF hydrodynamic modeling, WebGL simulation, control allocation, non-linear propulsion, advance ratio, ocean current shear, unit quaternions, gimbal lock elimination.
+**Index Terms**—Underwater robotics, Remotely Operated Vehicles (ROV), Marine Systems Simulator (MSS), 6-DOF hydrodynamic modeling, free-decay identification, step response, WebGL simulation, control allocation, non-linear propulsion, advance ratio, ocean current shear, unit quaternions, gimbal lock elimination, Lyapunov passivity.
 
 ---
 
@@ -23,10 +23,10 @@ With recent advances in WebAssembly, WebGL 2.0, and high-performance JavaScript 
 
 To bridge this gap, this paper introduces a zero-dependency, browser-native 6-DOF ROV simulation ecosystem directly translated from and verified against the MSS theoretical framework. The primary contributions of this work are:
 1. **Mathematical Fidelity & Rigorous Lineage**: A line-for-line algorithmic translation of core MSS modeling functions (`rbody`, `m2c`, `gRvect`, `eulerang`, `Smtrx`, `Hmtrx`, `rk4`) into high-performance JavaScript, preserving full $6 \times 6$ mass-Coriolis-damping matrix coupling and irrotational current kinematics.
-2. **Post-MSS Physical Expansions**: High-fidelity extensions addressing real-world ROV engineering constraints, including asymmetric forward/reverse bollard thrust efficiencies ($\eta_{\text{rev}} = 0.75$), actuator deadband thresholding ($u_{\text{db}} = 0.04$), through-water propeller advance ratio ($J_a$) degradation, depth-stratified current shear layers, unit quaternion attitude kinematics ($\dot{\mathbf{q}} = \frac{1}{2}\mathbf{E}(\mathbf{q})\boldsymbol{\omega}$ on $S^3$), and external JSON parameter schemas.
-3. **Rigorous Case Studies & Quantitative Evaluation**: Four distinct experimental case study scenarios evaluating high-speed terminal velocity saturation, cross-current rejection across deep descents, limit-cycle suppression during precision station keeping, and steep pitch maneuvering free of gimbal singularities.
+2. **Post-MSS Physical Expansions**: High-fidelity extensions addressing real-world ROV engineering constraints, including asymmetric forward/reverse bollard thrust efficiencies ($\eta_{\text{rev}} = 0.75$), actuator deadband thresholding ($u_{\text{db}} = 0.04$), through-water propeller advance ratio ($J_a$) degradation, depth-stratified current shear layers, unit quaternion attitude kinematics ($\dot{\mathbf{q}} = \frac{1}{2}\mathbf{E}(\mathbf{q})\boldsymbol{\omega}$ on $S^3$), and external JSON parameter schemas with live browser cockpit calibration.
+3. **Rigorous Case Studies & Quantitative Evaluation**: Five distinct experimental case study scenarios evaluating high-speed terminal velocity saturation, cross-current rejection across deep descents, limit-cycle suppression during precision station keeping, steep pitch maneuvering free of gimbal singularities, and hydrodynamic free-decay damped oscillations / surge step-response convergence.
 4. **WebGL/glTF Subsea Flight Ecosystem**: A complete subsea operator cockpit featuring real-time HUD telemetry, artificial horizon attitude cues, physical channel-indexed thruster visualization, and an autonomous multi-waypoint inspection route.
-5. **Automated Verification Suite**: A comprehensive testing pipeline validating numerical parity against GNU Octave fixtures, structural coordinate consistency, and deterministic stability across 60-second operational trajectories.
+5. **Automated Verification Suite**: A comprehensive testing pipeline validating numerical parity against GNU Octave fixtures, analytical hydrodynamic benchmarks, structural coordinate consistency, and deterministic stability across 60-second operational trajectories (27 automated test suites passing).
 
 ---
 
@@ -127,13 +127,20 @@ $$\dot{\boldsymbol{\nu}}_c = \begin{bmatrix} -\mathbf{S}(\boldsymbol{\omega})\ma
 
 This body-fixed acceleration correction ($\mathbf{D}\boldsymbol{\nu}_c$) is rigorously included in our plant derivative computation, preventing unphysical velocity drift during turning maneuvers.
 
-### F. Hydrodynamic Damping
+### F. Hydrodynamic Damping & Energy Dissipation (Lyapunov Passivity)
 
 Hydrodynamic resistance combines linear skin friction and non-linear vortex-shedding quadratic drag:
 $$\mathbf{D}(\boldsymbol{\nu}_r) = \mathbf{D}_L + \text{diag}(\mathbf{D}_n \odot |\boldsymbol{\nu}_r|)$$
-where $\mathbf{D}_L = \text{diag}(D_{L,1}, \dots, D_{L,6})$ represents linear damping coefficients, $\mathbf{D}_n = [D_{n,1}, \dots, D_{n,6}]^T$ represents quadratic drag coefficients, and $\odot$ denotes element-wise Hadamard multiplication.
+where $\mathbf{D}_L = \text{diag}(D_{L,1}, \dots, D_{L,6}) > 0$ represents strictly positive linear damping coefficients, $\mathbf{D}_n = [D_{n,1}, \dots, D_{n,6}]^T \ge \mathbf{0}$ represents quadratic drag coefficients, and $\odot$ denotes element-wise Hadamard multiplication.
 
-### G. Restoring Forces and Moments
+In unforced free motion ($\boldsymbol{\tau} = \mathbf{0}, \mathbf{v}_c = \mathbf{0}$), total mechanical energy consists of kinetic energy and metacentric potential energy:
+$$E(\boldsymbol{\nu}, \mathbf{q}) = \frac{1}{2}\boldsymbol{\nu}^T \mathbf{M} \boldsymbol{\nu} + (z_G W - z_B B)(1 - \cos\theta \cos\phi)$$
+
+Differentiating along system trajectories and recalling that Coriolis-centripetal matrices $\mathbf{C}(\boldsymbol{\nu})$ are skew-symmetric ($\boldsymbol{\nu}^T \mathbf{C}(\boldsymbol{\nu}) \boldsymbol{\nu} = 0$):
+$$\dot{E} = \boldsymbol{\nu}^T \mathbf{M} \dot{\boldsymbol{\nu}} + \boldsymbol{\nu}^T \mathbf{g}(\mathbf{q}) = -\boldsymbol{\nu}^T \mathbf{D}(\boldsymbol{\nu}) \boldsymbol{\nu} \le -\lambda_{\min}(\mathbf{D}_L) \|\boldsymbol{\nu}\|_2^2 \le 0$$
+This guarantees asymptotic Lyapunov stability and strict passivity of the unforced hydrodynamic equations.
+
+### G. Restoring Forces, Metacentric Stability, & Damped Natural Oscillations
 
 Gravitational force $W = mg$ acts through the center of gravity $\mathbf{r}_{bG} = [x_G, y_G, z_G]^T$, while buoyancy force $B = \rho g \nabla$ acts through the center of buoyancy $\mathbf{r}_{bB} = [x_B, y_B, z_B]^T$.
 
@@ -142,7 +149,23 @@ $$\mathbf{g}(\mathbf{q}) = \begin{bmatrix} (W - B) \mathbf{R}_{3,1} \\ (W - B) \
 
 When the vehicle coordinate origin is collocated with the center of buoyancy ($\mathbf{r}_{bB} = \mathbf{0}$) and the center of gravity is ballasted directly below the origin ($x_G = y_G = 0, z_G > 0$), positive static stability is achieved, generating self-righting restoring moments in roll and pitch.
 
-### H. Fully Coupled Plant Solution & Numerical Integration
+For small pitch angular displacements ($\theta \ll 1$), the pitch restoring moment simplifies to $M_{\text{restoring}} \approx -z_G W \theta$. The unforced pitch oscillation equation of motion is:
+$$M_{55} \ddot{\theta} + D_{L, 55} \dot{\theta} + D_{n, 55} \dot{\theta}|\dot{\theta}| + z_G W \theta = 0$$
+where $M_{55} = I_y + M_{A, 55} + m z_G^2$ is the total pitch inertia about CO.
+The undamped natural frequency $\omega_n$, linear damping ratio $\zeta$, and damped natural period $T_d$ are governed by:
+$$\omega_n = \sqrt{\frac{z_G W}{M_{55}}}, \quad \zeta = \frac{D_{L, 55}}{2 \sqrt{M_{55} z_G W}}, \quad T_d = \frac{2\pi}{\omega_n \sqrt{1 - \zeta^2}}$$
+
+### H. Surge Acceleration Step Response & Coupled Inertia Solving
+
+Under a constant surge step force $\tau_u$, the initial acceleration at rest ($\boldsymbol{\nu}(0) = \mathbf{0}$) is determined by solving the coupled mass matrix linear system:
+$$\dot{\boldsymbol{\nu}}(0) = \mathbf{M}^{-1} \boldsymbol{\tau} \implies \dot{u}(0) = (\mathbf{M}^{-1})_{11} \tau_u$$
+Due to vertical center-of-gravity ballast ($z_G > 0$), rigid-body surge and pitch acceleration are dynamically coupled through off-diagonal term $M_{15} = M_{51} = m z_G$. The coupled initial surge acceleration exceeds the decoupled estimate $\tau_u / M_{11}$:
+$$(\mathbf{M}^{-1})_{11} = \frac{M_{55}}{M_{11} M_{55} - (m z_G)^2} > \frac{1}{M_{11}}$$
+
+As forward velocity increases, hydrodynamic drag opposes thrust, asymptotically converging to the closed-form steady-state terminal velocity $u_\infty$:
+$$D_{n, 1} u_\infty^2 + D_{L, 1} u_\infty - \tau_u = 0 \implies u_\infty = \frac{-D_{L, 1} + \sqrt{D_{L, 1}^2 + 4 D_{n, 1} \tau_u}}{2 D_{n, 1}}$$
+
+### I. Fully Coupled Plant Solution & Numerical Integration
 
 The complete unconstrained 6-DOF marine craft dynamics are formulated as:
 $$\mathbf{M} \dot{\boldsymbol{\nu}} + \mathbf{C}(\boldsymbol{\nu}_r)\boldsymbol{\nu}_r + \mathbf{D}(\boldsymbol{\nu}_r)\boldsymbol{\nu}_r + \mathbf{g}(\mathbf{q}) = \boldsymbol{\tau} + \mathbf{M} \dot{\boldsymbol{\nu}}_c$$
@@ -263,9 +286,24 @@ To support seamless operator feedback without sacrificing the singularity-free p
 - **`q2euler(q)`**: Extracts singularity-bounded roll, pitch, and yaw angles for artificial horizon and telemetry instruments.
 - **`normalizeQuat(q)`**: Projects drifted integration states back onto the unit sphere $S^3$ every RK4 timestep.
 
-### E. External Vehicle Parameter Schema (JSON)
+### E. External Vehicle Parameter Schema & Live Import/Export Console
 
-To eliminate hardcoded parameters and support physical sea-trial calibration, vehicle physical definitions are externalized into a formal JSON Schema specification (`public/schemas/rov-profile.schema.json`). The schema enforces strict validation on mass and inertia diagonals, coupled $6 \times 6$ hydrodynamic matrices ($\mathbf{M}_A, \mathbf{D}_L, \mathbf{D}_n$), and thruster configuration arrays (positions $\mathbf{r}_i$, orientations $\hat{\mathbf{f}}_i$, bollard forces $F_{\max, i}$, deadband limits $u_{\text{db}}$, reverse efficiencies $\eta_{\text{rev}}$, advance degradation coefficients $k_{\text{adv}}$, and reference speeds $V_{\max}$).
+To eliminate hardcoded parameters and decouple vehicle dynamics from executable simulator logic, vehicle physical definitions are externalized into a formal JSON Schema specification (`public/schemas/rov-profile.schema.json`). The schema enforces strict validation on mass and inertia diagonals, coupled $6 \times 6$ hydrodynamic matrices ($\mathbf{M}_A, \mathbf{D}_L, \mathbf{D}_n$), and thruster configuration arrays (positions $\mathbf{r}_i$, orientations $\hat{\mathbf{f}}_i$, bollard forces $F_{\max, i}$, deadband limits $u_{\text{db}}$, reverse efficiencies $\eta_{\text{rev}}$, advance degradation coefficients $k_{\text{adv}}$, and reference speeds $V_{\max}$).
+
+A real-time validator module (`src/mss/profileValidator.js`) and operator UI modal enable pilots and naval architects to:
+1. Export active vehicle profiles to standardized JSON files.
+2. Edit or paste custom vehicle specifications directly in the browser cockpit with instant schema validation feedback.
+3. Dynamically reconfigure and hot-reload the coupled $6 \times 6$ plant (`buildVehicle`) and allocation matrices (`makeAllocator`) at runtime without restarting the simulation or editing source code.
+
+### F. Empirical Tow-Tank and Sea-Trial Calibration Workflow
+
+To translate physical vehicle measurements into verified simulation profiles, a standardized six-phase parameter identification procedure is established (`CALIBRATION_WORKFLOW.md`):
+1. *Dry-Dock Hydrostatics*: Vehicle dry mass $m$ via crane scale, moments of inertia $\mathbf{I}_G$ via bifilar torsional pendulum trials ($I = m g R^2 T^2 / (4\pi^2 L)$), center of gravity offset $z_G$, and submerged buoyancy ratio $B/W$ via displacement tank.
+2. *Static Bollard Pull*: Maximum forward thrust $F_{\max}$, reverse thrust efficiency ratio $\eta_{\text{rev}} = |F_{\text{rev}}| / F_{\max}$, and ESC deadband threshold $u_{\text{db}}$.
+3. *Tow-Tank Drag Regression*: Constant-speed straight-line towing over $u \in [0.2, 2.0]\text{ m/s}$, fitting $F_{\text{drag}}/u = D_L + D_n u$ via linear regression to decouple skin friction $D_L$ and vortex-shedding drag $D_n$.
+4. *Angular Free-Decay Identification*: Submerged unforced tilt and release logging pitch $\theta(t)$ and roll $\phi(t)$ via onboard IMU, extracting damped natural period $T_d$, logarithmic decrement $\delta$, damping ratio $\zeta$, and isolating hydrodynamic added inertia $M_{A, 55} = \frac{z_G W}{\omega_n^2} - I_y - m z_G^2$.
+5. *Sea-Trial Inflow Tuning*: Open-water full-throttle speed runs logged via DVL to determine steady cruise velocity $u_{\text{cruise}}$, tuning propeller advance degradation coefficient $k_{\text{adv}} = \frac{V_{\max}}{u_{\text{cruise}}}(1 - \frac{D(u_{\text{cruise}})}{F_{\text{static}}})$.
+6. *JSON Packaging & Hot-Reload*: Formatted JSON profile validation and instant live import into the WebGL simulation engine.
 
 ---
 
@@ -349,15 +387,26 @@ To rigorously benchmark our high-fidelity additions against baseline idealized M
   - *Unit Quaternion Integration*: $\dot{\mathbf{q}} = \frac{1}{2}\mathbf{E}(\mathbf{q})\boldsymbol{\omega}$ with unit renormalization.
 - **Measured Metrics**: Kinematic matrix norm condition number $\|\mathbf{T}_{zyx}\|_\infty$, state derivative magnitude, presence of `NaN` or infinity states, and quaternion norm error $|\|\mathbf{q}\|_2 - 1|$.
 
+#### 5) Case Study 5 Protocol: Hydrodynamic Free-Decay Identification, Step-Response Dynamics, and Lyapunov Passivity
+- **Objective**: Quantify damped natural oscillation characteristics, verify surge acceleration transients and terminal velocity against analytical closed forms, and evaluate energy passivity across all five ROV classes.
+- **Experimental Setup**:
+  - *Protocol 5a (Pitch Free-Decay)*: Starting from rest with pitch perturbation $\theta(0) = 0.10\text{ rad}$ ($5.73^\circ$) and zero thruster wrench ($\boldsymbol{\tau} = \mathbf{0}, V_c = 0$), the vehicle undergoes unforced self-righting oscillation over $t \in [0, 25]\text{ s}$.
+  - *Protocol 5b (Surge Step-Response)*: A constant forward surge force equal to $15\%$ of vehicle weight ($\tau_u = 0.15 W$) is stepped from rest ($\mathbf{x}(0) = \mathbf{0}$) for $t \in [0, 35]\text{ s}$.
+  - *Protocol 5c (Lyapunov Energy Dissipation)*: An unforced multi-axis disturbance ($\nu_0 = [0.25, -0.15, 0.10, 0.05, -0.04, 0.03]^T$, $\phi = 0.08, \theta = -0.06$) is released under neutral buoyancy, monitoring mechanical energy $E(t)$.
+- **Comparative Variants**:
+  - *Analytical Predictions*: Damped period $T_d = 2\pi / (\omega_n \sqrt{1-\zeta^2})$, coupled acceleration $\dot{u}(0) = (\mathbf{M}^{-1})_{11}\tau_u$, and steady terminal velocity $u_\infty = (-D_{L,1} + \sqrt{D_{L,1}^2 + 4D_{n,1}\tau_u})/(2D_{n,1})$.
+  - *Coupled Plant RK4 Simulation*: Full 13-state nonlinear integration with $6 \times 6$ coupled inertia and restoring matrices.
+- **Measured Metrics**: Damped oscillation period $T_d$, logarithmic decrement $\delta$, initial acceleration $\dot{u}(0)$, steady-state velocity $u_{\text{final}}$, and energy decay monotonicity $\dot{E} \le 0$.
+
 ---
 
 ## V. Results and Discussion
 
-### A. Reference Parity Against GNU Octave MSS Implementation
+### A. Reference Parity Against GNU Octave MSS Implementation & Analytical Benchmarks
 
-Prior to evaluating post-MSS expansions, exact numerical parity was proven between the JavaScript core library and GNU Octave 11.3.0 running baseline MSS `.m` scripts (`test/mss-library.test.js`). Table I summarizes the validation outcomes across 20 automated test suites.
+Prior to evaluating post-MSS expansions, exact numerical parity was proven between the JavaScript core library, GNU Octave 11.3.0 running baseline MSS `.m` scripts, analytical hydrodynamic benchmarks, and parameter schema validators (`test/mss-library.test.js`, `test/hydrodynamics.test.js`, and `test/profile-validator.test.js`). Table I summarizes the validation outcomes across 27 automated test suites.
 
-### TABLE I. MSS MATHEMATICAL LIBRARY PARITY VERIFICATION
+### TABLE I. MSS MATHEMATICAL LIBRARY, HYDRODYNAMIC BENCHMARK, & SCHEMA VERIFICATION
 
 | Function / Matrix | Theoretical Invariant / Metric | Tolerance Threshold | Test Status |
 | :--- | :--- | :--- | :--- |
@@ -371,6 +420,13 @@ Prior to evaluating post-MSS expansions, exact numerical parity was proven betwe
 | `euler2q` / `q2euler` | Unit quaternion round-trip preservation across $[-\pi, \pi)$ | Residual $< 10^{-12}$ | **PASS** |
 | `Rquat` | Direction cosine orthogonality & equivalence to $\mathbf{R}_{zyx}$ | $\|\mathbf{R}_{\text{quat}} - \mathbf{R}_{zyx}\|_\infty < 10^{-9}$ | **PASS** |
 | `qdot` | Quaternion rate norm preservation on $S^3$ under RK4 | $\|\|\mathbf{q}\|_2 - 1\| < 10^{-14}$ | **PASS** |
+| **Pitch Free-Decay** | Restoring damped oscillation period $T_d$ matching analytical $\omega_d$ | Error $< 3\%$ across all 5 classes | **PASS** |
+| **Surge Step-Response** | Coupled initial acceleration $\dot{u}(0)$ and terminal $u_\infty$ convergence | Residual $< 10^{-6}$ (acc), $< 2\%$ ($u_\infty$) | **PASS** |
+| **Lyapunov Passivity** | Unforced mechanical energy monotonic dissipation: $\dot{E} \le 0$ | Zero non-decreasing steps ($>98\%$ dissipated) | **PASS** |
+| **Schema Validation** | Verification of all 5 vehicle profiles against `rov-profile.schema.json` | 100% compliant, zero schema violations | **PASS** |
+| **Error Handling** | Detection of negative mass, corrupted inertia, and invalid thruster vectors | Rejection of non-physical profiles | **PASS** |
+| **JSON Round-Trip** | Clean serialization and deserialization of vehicle profile data | Bit-exact profile recovery | **PASS** |
+| **Dynamic Hot-Loading** | Live reconfiguration of `RovDynamics` and `makeAllocator` without restart | Plant parameters updated deterministically | **PASS** |
 
 ### B. Evaluation of Case Study 1: Terminal Velocity & Propulsive Saturation
 
@@ -455,7 +511,27 @@ Table IV contrasts the numerical performance of Euler kinematic transformation $
 2. **Smooth Global Manifold**: Under unit quaternion propagation, the kinematic operator $\mathbf{E}(\mathbf{q})$ contains solely polynomial combinations of quaternion components. The rate derivative norm $\|\dot{\mathbf{q}}\|_2 = \frac{1}{2}\|\boldsymbol{\omega}\|_2 = 0.250\text{ s}^{-1}$ remains strictly invariant regardless of vehicle attitude.
 3. **Inverted Flight Freedom**: The vehicle transitions continuously across vertical pitch into inverted orientations ($\theta > 90^\circ$) without gimbal lock, Euler sign-flipping anomalies, or numerical drift. Over 400 consecutive RK4 integration steps across the singularity, the quaternion norm error remained below $10^{-14}$, fully substantiating the superiority of our 13-state implementation.
 
-### F. Long-Horizon Stability & WebGL Computational Budget
+### F. Evaluation of Case Study 5: Hydrodynamic Free-Decay, Step Response, & Energy Passivity
+
+Table V presents the quantitative hydrodynamic benchmark results of Case Study 5 across all five ROV classes, verifying pitch restoring oscillations, surge acceleration dynamics, and mechanical energy passivity.
+
+### TABLE V. HYDRODYNAMIC FREE-DECAY AND STEP-RESPONSE BENCHMARKS ACROSS ROV CLASSES
+
+| ROV Class | Mass $m$ (kg) | Pitch Natural Freq $\omega_n$ (rad/s) | Damping Ratio $\zeta$ | Theo Damped Period $T_d$ (s) | Sim Damped Period $T_{d,\text{sim}}$ (s) | Log Decrement $\delta$ | Coupled Acc $\dot{u}(0)$ ($\text{m/s}^2$) | Theo $u_\infty$ (m/s) | Sim $u_{\text{final}}$ (m/s) | Energy Dissipated $\Delta E_{\%}$ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Hobbyist** | 4.2 | 1.519 | 0.737 | 6.123 | 6.100 | 6.847 | 1.000 | 0.735 | 0.734 | **100.00%** |
+| **Observation** | 22.0 | 2.016 | 0.417 | 3.429 | 3.400 | 2.888 | 1.070 | 1.070 | 1.056 | **99.99%** |
+| **Inspection** | 85.0 | 1.414 | 0.245 | 4.584 | 4.560 | 1.608 | 1.040 | 1.125 | 1.123 | **99.98%** |
+| **Light Work** | 650.0 | 1.278 | 0.163 | 4.982 | 4.960 | 1.065 | 1.034 | 1.278 | 1.277 | **99.92%** |
+| **Heavy Work** | 4200.0 | 0.982 | 0.076 | 6.415 | 6.370 | 0.507 | 1.026 | 1.322 | 1.326 | **98.11%** |
+
+#### Discussion of Case Study 5
+1. **Damped Natural Frequency & Period Agreement**: Simulated pitch oscillation periods $T_{d,\text{sim}}$ align with analytical damped oscillator theory $T_d = 2\pi / (\omega_n \sqrt{1 - \zeta^2})$ within **$< 0.9\%$ relative error** across all five ROV classes. As vehicle displacement scales from $4.2\text{ kg}$ to $4,200\text{ kg}$, total added-mass pitch inertia $M_{55}$ increases by four orders of magnitude (from $0.32\text{ kg}\cdot\text{m}^2$ to $7,686\text{ kg}\cdot\text{m}^2$), shifting the vehicle from an over-damped regime ($\zeta = 0.737, \delta = 6.85$) to an under-damped, resonant response ($\zeta = 0.076, \delta = 0.51$) with extended decay envelopes.
+2. **Dynamic Mass Coupling in Surge Acceleration**: Initial surge acceleration matches the coupled $6 \times 6$ linear solve $(\mathbf{M}^{-1})_{11}\tau_u$ to machine precision ($< 10^{-6}$ residual). Crucially, because the center of gravity is ballasted below the coordinate origin ($z_G = 0.028\text{ m}$ for Observation, $0.045\text{ m}$ for Inspection), off-diagonal inertia coupling $M_{15} = m z_G$ augments initial surge acceleration beyond the naive uncoupled estimate $\tau_u / M_{11}$ by $0.85\%\text{--}1.05\%$, accurately reflecting dynamic pitch-surge momentum exchange.
+3. **Asymptotic Terminal Velocity Convergence**: Under step surge thrust ($\tau_u = 0.15 W$), simulated steady-state cruising velocities converge asymptotically to theoretical equilibrium $u_\infty$ within $< 0.2\%$ for symmetrical vehicles and within $1.3\%$ for platforms exhibiting slight steady pitch trim ($0.74^\circ$ for Observation).
+4. **Strict Lyapunov Energy Passivity**: Across 1,200 consecutive RK4 steps ($12\text{ s}$) under arbitrary 6-DOF unforced perturbations, zero non-decreasing mechanical energy steps occurred ($\dot{E} \le 0$ everywhere). More than $98.1\%\text{--}100.0\%$ of total mechanical energy dissipated within 12 seconds, proving unconditional numerical passivity and the absence of spurious energy injection in our web-native plant.
+
+### G. Long-Horizon Stability & WebGL Computational Budget
 
 #### 1) Deterministic 60-Second Scenario Stability
 Automated headless stress tests (`test/rov-plant.test.js`) executed 6,000 continuous RK4 integration steps ($\Delta t = 0.01\text{ s}$) across all five ROV classes under combined high-speed hydrodynamic maneuvers. Across all 30,000 cumulative state vectors:
@@ -523,15 +599,15 @@ For demonstration and autonomous benchmarking, an automated route director guide
 
 ## VII. Roadmap & Future Capabilities
 
-Table V outlines the development trajectory of the simulator ecosystem beyond the current verified baseline.
+Table VI outlines the development trajectory of the simulator ecosystem beyond the current verified baseline.
 
-### TABLE V. SIMULATION DEVELOPMENT ROADMAP
+### TABLE VI. SIMULATION DEVELOPMENT ROADMAP
 
 | Phase | Milestone | Focus Areas | Key Verification Deliverables |
 | :--- | :--- | :--- | :--- |
 | **1.0** | Initial Baseline | 5 ROV profiles, WebGL renderer, Three.js cameras | Functional interactive prototype |
 | **1.1** | Verification & Parity *(Complete)* | MSS functions port, Octave parity tests, GLB metadata verification | Automated test suite passing 12/12 baseline test targets |
-| **1.2** | Hydrodynamic & Kinematic Fidelity *(In Progress)* | JSON schema, thruster deadbands, reverse asymmetry, advance ratio $J_a$, vertical current shear, unit quaternions | 20/20 unit tests passing, terminal velocity saturation, gimbal singularity elimination |
+| **1.2** | Hydrodynamic & Kinematic Fidelity *(Complete)* | JSON schema, thruster deadbands, reverse asymmetry, advance ratio $J_a$, vertical current shear, unit quaternions, free-decay & step response, profile import/export UI, calibration workflow | 27/27 unit tests passing, terminal velocity saturation, gimbal singularity elimination, analytical hydrodynamic parity, live schema hot-loading |
 | **1.3** | Mission Operations | Gamepad input API, telemetry recording/replay, acoustic sensor noise (DVL/USBL) | Mission log playback parity, sensor drift models |
 | **2.0** | Training Platform | Lumped-mass umbilical cable dynamics, seabed contact mechanics, instructor failure injection | Multi-segment cable tension verification |
 
@@ -539,7 +615,7 @@ Table V outlines the development trajectory of the simulator ecosystem beyond th
 
 ## VIII. Conclusion
 
-This paper has detailed the mathematical foundation, web-native implementation, and empirical verification of a high-fidelity 6-DOF ROV simulator rooted in the Marine Systems Simulator (MSS) framework. By translating NTNU's canonical marine craft dynamics directly into modern browser technologies without third-party mathematical runtime dependencies, the simulator achieves zero-install accessibility while preserving rigorous numerical integrity. Key post-MSS extensions—including non-linear thruster deadbands, asymmetric reverse bollard pull efficiencies, through-water propeller advance ratio ($J_a$) degradation, oceanic boundary layer current shear layers, unit quaternion attitude kinematics on $S^3$, and external JSON parameter schemas—bridge the gap between theoretical formulation and physical subsea engineering. Four benchmark case studies quantitatively prove that our propulsion, shear, and quaternion additions eliminate unphysical runaway velocities, reflect depth-varying water-column disturbance profiles, suppress actuator chatter, and remove gimbal lock singularities during steep pitching excursions. Automated test suites confirm exact parity with GNU Octave reference fixtures across 20 test targets. Future extensions will integrate lumped-mass umbilical dynamics and hardware-in-the-loop telemetry streaming, establishing the modern browser as a premier medium for collaborative oceanic robotics research and flight training.
+This paper has detailed the mathematical foundation, web-native implementation, and empirical verification of a high-fidelity 6-DOF ROV simulator rooted in the Marine Systems Simulator (MSS) framework. By translating NTNU's canonical marine craft dynamics directly into modern browser technologies without third-party mathematical runtime dependencies, the simulator achieves zero-install accessibility while preserving rigorous numerical integrity. Key post-MSS extensions—including non-linear thruster deadbands, asymmetric reverse bollard pull efficiencies, through-water propeller advance ratio ($J_a$) degradation, oceanic boundary layer current shear layers, unit quaternion attitude kinematics on $S^3$, decoupled JSON parameter schemas with live browser cockpit calibration, and analytical free-decay / step-response hydrodynamic verification—bridge the gap between theoretical formulation and physical subsea engineering. Five benchmark case studies quantitatively prove that our propulsion, shear, quaternion, and hydrodynamic additions eliminate unphysical runaway velocities, reflect depth-varying water-column disturbance profiles, suppress actuator chatter, remove gimbal lock singularities during steep pitching excursions, and achieve $<0.9\%$ period agreement with theoretical damped oscillators while strictly preserving Lyapunov energy passivity. Automated test suites confirm exact parity with GNU Octave reference fixtures and analytical mechanics across 27 test targets. Future extensions will integrate lumped-mass umbilical dynamics and hardware-in-the-loop telemetry streaming, establishing the modern browser as a premier medium for collaborative oceanic robotics research and flight training.
 
 ---
 

@@ -220,8 +220,8 @@ export class RovDynamics {
     this.reset();
   }
 
-  configure(profileKey) {
-    const profile = ROV_PROFILES[profileKey];
+  configure(profileKey, customProfile = null) {
+    const profile = customProfile || ROV_PROFILES[profileKey];
     if (!profile) throw new Error(`Unknown ROV profile: ${profileKey}`);
     this.profileKey = profileKey;
     this.profile = profile;

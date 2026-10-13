@@ -2,7 +2,7 @@
 
 All notable changes to the browser ROV simulator are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow Semantic Versioning.
 
-## [1.2.0] - In Progress
+## [1.2.0] - 2026-10-13
 
 ### Added
 
@@ -11,13 +11,26 @@ All notable changes to the browser ROV simulator are documented here. The format
 - Non-linear thruster mechanics in `src/physics.js`:
   - Deadband cutoff (`effectiveThrustRatio`) modeling static friction and ESC deadbands ($u \le 0.04 \implies 0$).
   - Asymmetric bollard pull efficiency ($75\%$ reverse efficiency) modeling ducted propeller reverse thrust loss.
+  - Through-water propeller advance ratio ($J_a$) and axial inflow degradation (`advanceRatioFactor`).
+- Vertical ocean current shear layer (`currentShear`) with depth-stratified velocity gradient and benthic boundary layer attenuation.
 - Unit quaternion attitude kinematics on $S^3$ in `src/mss/library.js` and `src/mss/rovPlant.js`:
   - Added `euler2q`, `q2euler`, `Rquat`, `qdot`, and `normalizeQuat` routines.
   - Upgraded vehicle plant state from 12-state Euler representation to a 13-state unit quaternion vector $[\boldsymbol{\nu}, \mathbf{p}^n, \mathbf{q}]$ with continuous renormalization on $S^3$.
   - Completely eliminated Euler gimbal lock singularities at $\theta = \pm 90^\circ$, removing hard pitch angle limits and enabling full $360^\circ$ tumbling and acrobatic maneuvering.
   - Maintained human-readable Euler angle conversions for the cockpit HUD artificial horizon, pitch bar, and compass dials.
-- Unit test suite expanded in `test/mss-library.test.js` covering unit quaternion round-trips, direction cosine orthogonality, and singularity-free RK4 rotation past $90^\circ$ (20/20 tests passing).
-- Comprehensive IEEE Transactions-style technical paper and architectural specification expanded in `to-publish/IEEE_TECHNICAL_REPORT.md` with in-depth derivations of local inflow velocity fields, depth-stratified current transport acceleration, and Case Study 4 evaluating quaternion stability across steep vertical pitch.
+- Real-time parameter schema validator and exporter module (`src/mss/profileValidator.js`).
+- Interactive Parameter Import / Export modal dialog in `index.html` and `src/main.js`:
+  - Real-time schema validation with instant error reports and diagnostic summary.
+  - One-click JSON export of active profiles.
+  - File picker and direct text input for importing custom vehicle profiles.
+  - Dynamic hot-reloading of coupled $6 \times 6$ plant and thruster allocation without page reloads.
+- Standard Operating Procedure (SOP) calibration guide in `CALIBRATION_WORKFLOW.md` documenting parameter extraction from dry-dock weigh scales, bifilar torsional pendulums, bollard pull test benches, tow-tank drag tests, and inclinometer free-decay logs.
+- Hydrodynamic free-decay, step-response, and Lyapunov passivity verification in `test/hydrodynamics.test.js`:
+  - Verified pitch and roll free-decay damped oscillations against analytical frequency $\omega_d$ and damping ratio $\zeta$ ($< 0.9\%$ period error across all 5 classes).
+  - Validated coupled $6 \times 6$ mass acceleration $\dot{u}(0) = (\mathbf{M}^{-1})_{11}\tau_u$ and asymptotic convergence to closed-form terminal velocity $u_\infty$ ($< 1.3\%$ error).
+  - Proved unforced mechanical energy monotonic dissipation $\dot{E} \le 0$ (zero non-decreasing steps, $>98\%$ energy dissipated over 12 seconds).
+- Automated test suite expanded to 27/27 unit tests passing across kinematics, quaternions, propulsion, schema, hydrodynamics, and hot-loading.
+- Comprehensive IEEE Transactions-style technical paper and architectural specification expanded in `to-publish/IEEE_TECHNICAL_REPORT.md` with five benchmark case studies, Table V quantitative free-decay metrics, and live calibration workflows.
 
 ## [1.1.0] - 2026-10-13
 

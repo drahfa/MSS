@@ -36,6 +36,7 @@
         </div>
         <div class="depth-ruler" aria-hidden="true"><span>0 m</span><i></i><span>10</span><i></i><span>20</span><i></i><span>30</span></div>
         <div class="viewport-tools">
+          <button id="profileButton" type="button" aria-label="Profile parameter import/export">Profile JSON</button>
           <button id="demoButton" type="button" aria-pressed="false">Demo <kbd>~</kbd></button>
           <button id="cameraButton" type="button" aria-label="Change camera view">Third person <kbd>C</kbd></button>
           <button id="trailButton" type="button" aria-pressed="true">Trail on</button>
@@ -127,6 +128,43 @@
           <button id="resetButton" class="text-button" type="button">Reset vehicle <kbd>X</kbd></button>
         </div>
       </section>
+
+      <!-- Vehicle Profile Calibration & Validation Modal -->
+      <dialog id="profileModal" class="profile-modal">
+        <div class="modal-shell">
+          <header class="modal-header">
+            <div>
+              <h2>Vehicle Profile Management</h2>
+              <p>Calibrate parameters and validate against <code>rov-profile.schema.json</code> in real time</p>
+            </div>
+            <button id="closeProfileModal" type="button" class="close-btn" aria-label="Close dialog">&times;</button>
+          </header>
+          <div class="modal-toolbar">
+            <button id="exportProfileBtn" type="button" class="tool-btn">Export JSON</button>
+            <label class="tool-btn file-btn">
+              <span>Import File</span>
+              <input id="importProfileFile" type="file" accept=".json" style="display:none" />
+            </label>
+            <button id="reloadProfilePresetBtn" type="button" class="tool-btn">Reload Default</button>
+          </div>
+          <div class="modal-body">
+            <div class="editor-pane">
+              <label for="profileJsonText">JSON Profile Configuration:</label>
+              <textarea id="profileJsonText" spellcheck="false" placeholder="Paste or edit ROV profile JSON..."></textarea>
+            </div>
+            <div class="diagnostic-pane">
+              <h3>Schema Validation</h3>
+              <div id="validationBadge" class="val-badge val-idle">Waiting for input</div>
+              <ul id="validationErrors" class="val-errors"></ul>
+              <div id="vehicleSummary" class="veh-summary"></div>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button id="applyProfileBtn" type="button" class="primary-button" disabled>Apply to Simulator</button>
+            <button id="cancelProfileBtn" type="button" class="text-button">Cancel</button>
+          </footer>
+        </div>
+      </dialog>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>

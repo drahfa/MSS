@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import createHabitat from './assets/underwater-research-habitat.mjs';
 import { RovDynamics, ROV_PROFILES, clamp } from './physics.js';
+import { validateProfile, formatProfileJson } from './mss/profileValidator.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -221,6 +222,7 @@ function toggleDemo() {
 }
 
 window.addEventListener('keydown', event => {
+  if (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'INPUT') return;
   if (['Space','KeyW','KeyA','KeyS','KeyD','KeyR','KeyF','KeyQ','KeyE'].includes(event.code)) event.preventDefault();
   if (!event.repeat && event.code === 'Space') togglePause();
   if (!event.repeat && event.code === 'KeyX') reset();
@@ -229,7 +231,10 @@ window.addEventListener('keydown', event => {
   if (!event.repeat && event.code === 'Backquote') toggleDemo();
   keys.add(event.code);
 });
-window.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('keyup', event => {
+  if (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'INPUT') return;
+  keys.delete(event.code);
+});
 window.addEventListener('blur', () => keys.clear());
 $('pauseButton').addEventListener('click', togglePause);
 $('resetButton').addEventListener('click', reset);
@@ -239,6 +244,127 @@ $('trailButton').addEventListener('click', () => { showTrail=!showTrail; trail.v
 $('assistButton').addEventListener('click', () => { if (demoMode) return; assist=!assist; $('assistButton').classList.toggle('active',assist); $('assistButton').setAttribute('aria-pressed',assist); targetDepth=sim.state[8]; targetHeading=sim.state[11]; updateModeIndicators(); });
 $('current').addEventListener('input', event => { sim.current.speed=Number(event.target.value); $('currentOutput').textContent=`${sim.current.speed.toFixed(2)} m/s`; });
 $('rovClass').addEventListener('change', event => loadRovClass(event.target.value));
+
+// Profile Parameter Import/Export & Real-Time Validation
+const profileModal = $('profileModal');
+const profileJsonText = $('profileJsonText');
+const validationBadge = $('validationBadge');
+const validationErrors = $('validationErrors');
+const vehicleSummary = $('vehicleSummary');
+const applyProfileBtn = $('applyProfileBtn');
+let validatedCandidate = null;
+
+function runLiveValidation() {
+  const text = profileJsonText.value.trim();
+  validationErrors.innerHTML = '';
+  vehicleSummary.innerHTML = '';
+  validatedCandidate = null;
+
+  if (!text) {
+    validationBadge.className = 'val-badge val-idle';
+    validationBadge.textContent = 'Waiting for input';
+    applyProfileBtn.disabled = true;
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    validationBadge.className = 'val-badge val-invalid';
+    validationBadge.textContent = 'Invalid JSON Syntax';
+    const li = document.createElement('li');
+    li.textContent = err.message;
+    validationErrors.appendChild(li);
+    applyProfileBtn.disabled = true;
+    return;
+  }
+
+  const result = validateProfile(parsed);
+  if (!result.valid) {
+    validationBadge.className = 'val-badge val-invalid';
+    validationBadge.textContent = `Schema Invalid (${result.errors.length} error${result.errors.length > 1 ? 's' : ''})`;
+    result.errors.forEach(err => {
+      const li = document.createElement('li');
+      li.textContent = err;
+      validationErrors.appendChild(li);
+    });
+    applyProfileBtn.disabled = true;
+  } else {
+    validationBadge.className = 'val-badge val-valid';
+    validationBadge.textContent = 'Schema Valid ✓';
+    applyProfileBtn.disabled = false;
+    validatedCandidate = parsed;
+
+    const s = result.summary;
+    vehicleSummary.innerHTML = `
+      <strong>${s.name}</strong> (${s.role})<br>
+      <span>Mass: ${s.mass} kg · Buoyancy Ratio: ${s.buoyancyRatio}</span><br>
+      <span>Thrusters: ${s.thrusterCount} units (Est. Fwd: ${s.forwardBollardEst} N, Vert: ${s.verticalBollardEst} N)</span><br>
+      <span>Center of Gravity (cg): ${s.cgOffset} m</span>
+    `;
+  }
+}
+
+function openProfileModal() {
+  profileJsonText.value = formatProfileJson(sim.profile);
+  runLiveValidation();
+  profileModal.showModal();
+}
+
+function closeProfileModal() {
+  profileModal.close();
+}
+
+function exportProfile() {
+  const text = profileJsonText.value || formatProfileJson(sim.profile);
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const name = (validatedCandidate?.name || sim.profile.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  a.download = `${name}-profile.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importProfileFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    profileJsonText.value = evt.target.result;
+    runLiveValidation();
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function reloadProfilePreset() {
+  profileJsonText.value = formatProfileJson(ROV_PROFILES[vehicleKey]);
+  runLiveValidation();
+}
+
+function applyProfileToSimulator() {
+  if (!validatedCandidate) return;
+  const p = validatedCandidate;
+  sim.configure(vehicleKey, p);
+  renderThrusterChannels(p);
+  $('vehicleSpec').textContent = `${p.mass.toLocaleString()} kg · ${p.role} · ${p.thrusters.length} thrusters (Custom Profile)`;
+  $('vehicleStateLabel').textContent = `${p.name} vehicle state`;
+  $('statusText').textContent = `Applied custom profile: ${p.name}`;
+  reset();
+  closeProfileModal();
+}
+
+$('profileButton').addEventListener('click', openProfileModal);
+$('closeProfileModal').addEventListener('click', closeProfileModal);
+$('cancelProfileBtn').addEventListener('click', closeProfileModal);
+$('profileJsonText').addEventListener('input', runLiveValidation);
+$('exportProfileBtn').addEventListener('click', exportProfile);
+$('importProfileFile').addEventListener('change', importProfileFile);
+$('reloadProfilePresetBtn').addEventListener('click', reloadProfilePreset);
+$('applyProfileBtn').addEventListener('click', applyProfileToSimulator);
 
 function resize() { const {clientWidth:w,clientHeight:h}=sceneHost; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(sceneHost);
